@@ -1,0 +1,12 @@
+node_modules
+android/.gradle
+android/build
+example
+test
+tests
+coverage
+.github
+.vscode
+.git
+*.log
+*.iml

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FlatList, Text, View, StyleSheet } from "react-native";
-import { getAudio, getAlbums, AudioItem, Album } from "@cadmuslabs/react-native-mediastore";
+import { getAudio, getAlbums, AudioItem, Album } from "@obsidian_north/react-native-mediastore";
 
 export default function MusicScreen() {
   const [songs, setSongs] = useState<AudioItem[]>([]);

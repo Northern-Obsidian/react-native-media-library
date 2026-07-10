@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { FlatList, Text, TextInput, View, StyleSheet } from "react-native";
-import { search, SearchResult } from "@cadmuslabs/react-native-mediastore";
+import { search, SearchResult } from "@obsidian_north/react-native-mediastore";
 
 export default function SearchScreen() {
   const [query, setQuery] = useState("");

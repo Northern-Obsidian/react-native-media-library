@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FlatList, Image, Text, View, StyleSheet, Dimensions } from "react-native";
-import { getImages, ImageItem } from "@cadmuslabs/react-native-mediastore";
+import { getImages, ImageItem } from "@obsidian_north/react-native-mediastore";
 
 const NUM_COLUMNS = 3;
 const SCREEN_WIDTH = Dimensions.get("window").width;

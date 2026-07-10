@@ -1,4 +1,4 @@
-# @cadmuslabs/react-native-mediastore
+# @obsidian_north/react-native-mediastore
 
 **Universal high-performance media indexing library for Android using MediaStore.**
 
@@ -149,13 +149,13 @@ Measurements taken on a Pixel 7 (Android 14) with 50k audio, 2k video, 10k image
 ## Installation
 
 ```bash
-npm install @cadmuslabs/react-native-mediastore
+npm install @obsidian_north/react-native-mediastore
 ```
 
 Or with a development build:
 
 ```bash
-npx expo install @cadmuslabs/react-native-mediastore
+npx expo install @obsidian_north/react-native-mediastore
 ```
 
 ---
@@ -211,7 +211,7 @@ Call `requestPermissions()` before querying media on first launch.
 ## Quick Start
 
 ```typescript
-import { getAudio, getImages, useMediaChangeEvent } from "@cadmuslabs/react-native-mediastore";
+import { getAudio, getImages, useMediaChangeEvent } from "@obsidian_north/react-native-mediastore";
 
 // Fetch all audio tracks
 const songs = await getAudio(
@@ -355,7 +355,7 @@ The module uses Android's `ContentObserver` to monitor MediaStore and emits even
 ### React Hook
 
 ```typescript
-import { useMediaChangeEvent } from "@cadmuslabs/react-native-mediastore";
+import { useMediaChangeEvent } from "@obsidian_north/react-native-mediastore";
 
 function MyComponent() {
   const lastEvent = useMediaChangeEvent((event) => {
@@ -392,7 +392,7 @@ interface Folder {
 ## Advanced Search
 
 ```typescript
-import { search } from "@cadmuslabs/react-native-mediastore";
+import { search } from "@obsidian_north/react-native-mediastore";
 
 const result = await search({
   query: "beatles",
@@ -448,7 +448,7 @@ Cache cleared → next query goes to MediaStore
 ### Music Player Library
 
 ```typescript
-import { getAudio, getAlbums, getArtists, getAlbumArtwork } from "@cadmuslabs/react-native-mediastore";
+import { getAudio, getAlbums, getArtists, getAlbumArtwork } from "@obsidian_north/react-native-mediastore";
 
 async function loadLibrary() {
   const [songs, albums, artists] = await Promise.all([
@@ -469,7 +469,7 @@ async function loadLibrary() {
 ### Gallery with Thumbnails
 
 ```typescript
-import { getImages, getImageThumbnail } from "@cadmuslabs/react-native-mediastore";
+import { getImages, getImageThumbnail } from "@obsidian_north/react-native-mediastore";
 
 async function loadGallery() {
   const images = await getImages(
@@ -491,7 +491,7 @@ async function loadGallery() {
 ### File Manager File List
 
 ```typescript
-import { getDocuments, getFolders } from "@cadmuslabs/react-native-mediastore";
+import { getDocuments, getFolders } from "@obsidian_north/react-native-mediastore";
 
 async function loadFileManager(folder?: string) {
   const [files, folders] = await Promise.all([
@@ -505,7 +505,7 @@ async function loadFileManager(folder?: string) {
 ### Search Screen
 
 ```typescript
-import { search, SearchResult } from "@cadmuslabs/react-native-mediastore";
+import { search, SearchResult } from "@obsidian_north/react-native-mediastore";
 import { useState, useCallback } from "react";
 
 function useSearch() {
@@ -526,7 +526,7 @@ function useSearch() {
 ### Infinite Scroll (Cursor-based)
 
 ```typescript
-import { getAudio } from "@cadmuslabs/react-native-mediastore";
+import { getAudio } from "@obsidian_north/react-native-mediastore";
 import { useState, useCallback } from "react";
 
 const PAGE_SIZE = 30;
@@ -551,7 +551,7 @@ function useInfiniteScroll() {
 ### Pagination (Offset-based)
 
 ```typescript
-import { getVideos } from "@cadmuslabs/react-native-mediastore";
+import { getVideos } from "@obsidian_north/react-native-mediastore";
 
 async function getPage(page: number, pageSize: number = 20) {
   return getVideos(
@@ -565,7 +565,7 @@ async function getPage(page: number, pageSize: number = 20) {
 ### Album Browser
 
 ```typescript
-import { getAlbums, getAudio, getAlbumArtwork } from "@cadmuslabs/react-native-mediastore";
+import { getAlbums, getAudio, getAlbumArtwork } from "@obsidian_north/react-native-mediastore";
 
 async function loadAlbumBrowser() {
   const albums = await getAlbums({ field: "year", order: "desc" });
@@ -585,7 +585,7 @@ async function loadAlbumBrowser() {
 ### Playlist Browser
 
 ```typescript
-import { getPlaylists, getAudio } from "@cadmuslabs/react-native-mediastore";
+import { getPlaylists, getAudio } from "@obsidian_north/react-native-mediastore";
 
 async function loadPlaylistSongs(playlistId: string) {
   return getAudio(null, { playlistId });
@@ -595,7 +595,7 @@ async function loadPlaylistSongs(playlistId: string) {
 ### Reactive Auto-refresh
 
 ```typescript
-import { getAudio, useMediaChangeEvent } from "@cadmuslabs/react-native-mediastore";
+import { getAudio, useMediaChangeEvent } from "@obsidian_north/react-native-mediastore";
 import { useState, useEffect } from "react";
 
 function useReactiveAudio() {

@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to @cadmuslabs/react-native-mediastore!
+Thank you for your interest in contributing to @obsidian_north/react-native-mediastore!
 
 ## Code of Conduct
 
