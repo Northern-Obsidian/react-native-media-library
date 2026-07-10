@@ -51,6 +51,20 @@ public class MediaStoreModule: Module {
       return repository.getFolders(sort: sort, filter: filter, pagination: pagination)
     }
 
+    AsyncFunction("getFolderStatistics") { (folderPath: String?) -> [[String: Any?]] in
+      let repository = MediaStoreRepository()
+      return repository.getFolderStatistics(folderPath: folderPath)
+    }
+
+    AsyncFunction("refreshIncremental") { (lastTimestamp: Double?) -> [String: Any?] in
+      let repository = MediaStoreRepository()
+      return repository.refreshIncremental(lastTimestamp: lastTimestamp)
+    }
+
+    AsyncFunction("getLastRefreshTimestamp") { () -> Double in
+      return MediaStoreRepository.lastRefreshTimestamp
+    }
+
     AsyncFunction("search") { (options: [String: Any?]) -> [String: Any?] in
       let repository = MediaStoreRepository()
       return repository.search(options: options)

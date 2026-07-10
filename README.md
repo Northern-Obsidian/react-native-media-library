@@ -125,6 +125,10 @@ No entire library is loaded into memory. Each row is mapped and collected increm
 - **Reactive** — React hook `useMediaChangeEvent` for real-time updates
 - **Batch queries** — `getLibrary()` returns all media types in one native call
 - **Thumbnail/artwork** — helper methods for album art and video/image thumbnails
+- **Folder statistics** — size histograms and per-type breakdowns for folders
+- **Incremental indexing** — delta-only refresh tracking added, modified, and removed items
+- **Plugin hooks** — extensible metadata system via JS-side plugin registration
+- **Improved batch queries** — per-type pagination, selective type fetching, and query timing
 
 ---
 
@@ -210,6 +214,9 @@ Call `requestPermissions()` before querying media on first launch.
 | Duplicate detection | ✅ | ❌ | ❌ |
 | Statistics | ✅ | ❌ | ❌ |
 | Favorites | ✅ | ❌ | ❌ |
+| Folder histograms | ✅ | ❌ | ❌ |
+| Incremental indexing | ✅ | ❌ | ❌ |
+| Plugin metadata | ✅ | ❌ | ❌ |
 
 ⚠️ = partial support (no metadata, no filtering)
 
@@ -296,6 +303,18 @@ function MediaWatcher() {
 | `getDuplicates(mediaType?)` | `DuplicateItem[]` | Detect duplicate files (Android only) |
 | `getStatistics()` | `MediaStoreStatistics` | Aggregate counts and sizes |
 | `getLibrary(sort?, filter?, pagination?)` | `LibraryResult` | Audio, video, images, docs in one batch |
+| `getLibraryQuery(options?)` | `LibraryQueryResult` | Improved batch query with per-type pagination and statistics |
+| `getFolderStatistics(folderPath?)` | `FolderStatistics[]` | Size histograms and type breakdowns per folder |
+| `refreshIncremental(lastTimestamp?)` | `IncrementalChanges` | Delta-only refresh tracking changes since timestamp |
+| `getLastRefreshTimestamp()` | `number` | Get last refresh timestamp |
+
+### Plugin System
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `registerPlugin(plugin)` | `void` | Register a metadata extractor plugin |
+| `unregisterPlugin(pluginId)` | `boolean` | Remove a plugin by ID |
+| `getRegisteredPlugins()` | `MetadataPlugin[]` | List all registered plugins |
 
 ### Artwork & Thumbnails
 
@@ -395,6 +414,7 @@ interface Folder {
 - **Counts**: `fileCount` is the number of files in that folder
 - **Sorting**: Supports sort fields like `name`, `dateAdded`, `dateModified`, `fileSize`
 - **Filtering**: Supports `mimeTypes`, `extensions`, `folder` (deep path prefix), `minSize`/`maxSize`
+- **Statistics**: Use `getFolderStatistics()` for size histograms and per-type breakdowns per folder
 
 ### iOS
 
@@ -628,6 +648,89 @@ function useReactiveAudio() {
 }
 ```
 
+### Folder Statistics
+
+```typescript
+import { getFolderStatistics } from "@obsidian_north/react-native-mediastore";
+
+async function analyzeStorage() {
+  const folders = await getFolderStatistics();
+
+  for (const folder of folders) {
+    console.log(`${folder.path}: ${folder.fileCount} files, ${folder.totalSize} bytes`);
+    console.log(`  <1MB: ${folder.histogram.lessThan1MB}`);
+    console.log(`  1-10MB: ${folder.histogram.from1to10MB}`);
+    console.log(`  10-100MB: ${folder.histogram.from10to100MB}`);
+    console.log(`  Avg size: ${folder.averageFileSize} bytes`);
+    console.log(`  Audio: ${folder.mediaTypeBreakdown.audio}, Video: ${folder.mediaTypeBreakdown.video}`);
+  }
+}
+```
+
+### Incremental Indexing
+
+```typescript
+import { refreshIncremental, getLastRefreshTimestamp } from "@obsidian_north/react-native-mediastore";
+
+async function syncLibrary() {
+  const lastSync = await getLastRefreshTimestamp();
+  const changes = await refreshIncremental(lastSync);
+
+  console.log(`${changes.added} new items`);
+  console.log(`${changes.modified} modified items`);
+  console.log(`${changes.removed} removed items`);
+}
+```
+
+### Plugin System
+
+```typescript
+import { registerPlugin, getAudio, unregisterPlugin } from "@obsidian_north/react-native-mediastore";
+
+// Register a plugin that adds star ratings based on duration
+registerPlugin({
+  id: "duration-rating",
+  name: "Duration Rating",
+  version: "1.0.0",
+  extract: (item) => {
+    if ("duration" in item) {
+      const duration = (item as any).duration;
+      const rating = duration > 300000 ? "long" : duration > 60000 ? "medium" : "short";
+      return { durationRating: rating };
+    }
+    return {};
+  },
+});
+
+// All queries now include plugin metadata
+const songs = await getAudio();
+// songs[0].customMetadata?.durationRating === "long" | "medium" | "short"
+
+unregisterPlugin("duration-rating");
+```
+
+### Improved Batch Query
+
+```typescript
+import { getLibraryQuery } from "@obsidian_north/react-native-mediastore";
+
+async function loadLibrary() {
+  const result = await getLibraryQuery({
+    types: ["audio", "video"],
+    typePagination: {
+      audio: { limit: 100, offset: 0 },
+      video: { limit: 20, offset: 0 },
+    },
+    includeStatistics: true,
+  });
+
+  console.log(`Total: ${result.totalCount} items (${result.totalSize} bytes)`);
+  console.log(`Query time: ${result.queryTime}ms`);
+  console.log(`Audio: ${result.perTypeStatistics?.audio.count} items`);
+  console.log(`Video: ${result.perTypeStatistics?.video.count} items`);
+}
+```
+
 ---
 
 ## Types
@@ -836,6 +939,85 @@ type ErrorCode =
 interface MediaStoreError { code: ErrorCode; message: string; details?: string; }
 ```
 
+### SizeHistogram
+
+```typescript
+interface SizeHistogram {
+  lessThan1MB: number;
+  from1to10MB: number;
+  from10to100MB: number;
+  from100MBto1GB: number;
+  greaterThan1GB: number;
+}
+```
+
+### FolderStatistics
+
+```typescript
+interface FolderStatistics {
+  id: string; name: string; path: string;
+  fileCount: number; totalSize: number;
+  histogram: SizeHistogram;
+  mediaTypeBreakdown: MediaTypeBreakdown;
+  averageFileSize: number;
+}
+interface MediaTypeBreakdown {
+  audio: number; video: number; image: number; document: number;
+}
+```
+
+### IncrementalChanges
+
+```typescript
+interface IncrementalChanges {
+  added: number; modified: number;
+  removed: number; timestamp: number;
+}
+```
+
+### MetadataPlugin
+
+```typescript
+interface MetadataPlugin {
+  id: string; name: string; version: string;
+  extract: (item: AudioItem | VideoItem | ImageItem | DocumentItem)
+    => Record<string, unknown> | Promise<Record<string, unknown>>;
+}
+```
+
+### LibraryQueryOptions
+
+```typescript
+interface LibraryQueryOptions {
+  sort?: SortOptions; filter?: FilterOptions;
+  pagination?: PaginationOptions;
+  types?: ("audio" | "video" | "image" | "document")[];
+  typePagination?: {
+    audio?: PaginationOptions; video?: PaginationOptions;
+    image?: PaginationOptions; document?: PaginationOptions;
+  };
+  includeStatistics?: boolean;
+}
+```
+
+### LibraryQueryResult
+
+```typescript
+interface LibraryQueryResult {
+  audio: AudioItem[]; videos: VideoItem[];
+  images: ImageItem[]; documents: DocumentItem[];
+  totalCount: number; totalSize: number;
+  perTypeStatistics?: LibraryPerTypeStatistics;
+  queryTime: number;
+}
+interface LibraryPerTypeStatistics {
+  audio: { count: number; totalSize: number; totalDuration: number };
+  video: { count: number; totalSize: number; totalDuration: number };
+  image: { count: number; totalSize: number };
+  document: { count: number; totalSize: number };
+}
+```
+
 ---
 
 ## Supported Document Types
@@ -957,7 +1139,7 @@ react-native-mediastore/
 ## Roadmap
 
 ```
-2.0 (Current)
+2.0
   ✓ iOS support (Photos Framework: PHAsset, PHImageManager, PHPhotoLibraryChangeObserver)
   ✓ Thumbnail generation (video + image) with configurable dimensions
   ✓ Album artwork extraction via ContentResolver / PHImageManager
@@ -970,11 +1152,11 @@ react-native-mediastore/
   ✓ SQL injection prevention (escapeSql)
   ✓ ExifInterface for camera make/model metadata
 
-2.1
-  ☐ Folder statistics (size histograms)
-  ☐ Incremental indexing (delta-only refresh)
-  ☐ Plugin hooks for custom metadata
-  ☐ Batch library query improvements
+2.1 (Current)
+  ✓ Folder statistics (size histograms)
+  ✓ Incremental indexing (delta-only refresh)
+  ✓ Plugin hooks for custom metadata
+  ✓ Batch library query improvements
 
 3.0
   ☐ AI semantic search

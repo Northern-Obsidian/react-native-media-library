@@ -1,37 +1,41 @@
 @file:Suppress("UnstableApiUsage")
 
 plugins {
-  id("com.android.library")
-  id("org.jetbrains.kotlin.android")
-  id("expo-module-gradle-plugin")
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    id("expo-module-gradle-plugin")
 }
 
+group = "com.obsidian_north"
+version = "2.0.1"
+
 android {
-  namespace = "expo.modules.mediastore"
-  compileSdk = 34
+    namespace = "expo.modules.mediastore"
+    compileSdk = 36
 
-  defaultConfig {
-    minSdk = 21
-    targetSdk = 34
-    versionCode = 3
-    versionName = "2.0.1"
-  }
+    defaultConfig {
+        minSdk = 24
+    }
 
-  compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-  }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
 
-  kotlinOptions {
-    jvmTarget = "17"
-  }
+    publishing {
+        singleVariant("release")
+    }
+}
 
-  publishing {
-    singleVariant("release")
-  }
+kotlin {
+    compilerOptions {
+        jvmTarget.set(
+            org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        )
+    }
 }
 
 dependencies {
-  implementation(project(":expo-modules-core"))
-  implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation(project(":expo-modules-core"))
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 }

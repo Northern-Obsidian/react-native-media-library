@@ -154,6 +154,46 @@ class MediaStoreRepository(private val context: Context) {
     )
   }
 
+  fun queryFolderStatistics(
+    folderPath: String?
+  ): Cursor? {
+    val projection = arrayOf(
+      MediaStore.Files.FileColumns._ID,
+      MediaStore.Files.FileColumns.MIME_TYPE,
+      MediaStore.Files.FileColumns.SIZE,
+      MediaStore.Files.FileColumns.RELATIVE_PATH
+    )
+    val selection = if (folderPath != null) {
+      "${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE '${MediaStoreQueryBuilder().escapeLike(folderPath)}%'"
+    } else {
+      "${MediaStore.Files.FileColumns.SIZE} > 0"
+    }
+    return contentResolver.query(
+      MediaStore.Files.getContentUri("external"),
+      projection,
+      selection,
+      null,
+      null
+    )
+  }
+
+  fun queryIncremental(
+    sinceTimestamp: Long,
+    projection: Array<String>?,
+    type: String
+  ): Cursor? {
+    val selection = "${MediaStore.MediaColumns.DATE_MODIFIED} > ?"
+    val selectionArgs = arrayOf((sinceTimestamp / 1000).toString())
+    val sortOrder = "${MediaStore.MediaColumns.DATE_MODIFIED} ASC"
+    return when (type) {
+      "audio" -> queryAudio(projection, selection, selectionArgs, sortOrder)
+      "video" -> queryVideo(projection, selection, selectionArgs, sortOrder)
+      "image" -> queryImages(projection, selection, selectionArgs, sortOrder)
+      "document" -> queryDocuments(projection, selection, selectionArgs, sortOrder)
+      else -> null
+    }
+  }
+
   fun queryByUri(uriString: String): Cursor? {
     val uri = Uri.parse(uriString)
     return contentResolver.query(uri, null, null, null, null)

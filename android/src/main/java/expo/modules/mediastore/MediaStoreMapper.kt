@@ -240,6 +240,47 @@ class MediaStoreMapper {
     return folderMap.values.toList()
   }
 
+  fun mapFolderStatistics(cursor: Cursor): List<FolderStatisticsRecord> {
+    val folderMap = mutableMapOf<String, FolderStatisticsRecord>()
+    while (cursor.moveToNext()) {
+      val path = CursorUtils.getString(cursor, FileColumns.RELATIVE_PATH)
+      val size = CursorUtils.getLong(cursor, FileColumns.SIZE)
+      val mimeType = CursorUtils.getString(cursor, FileColumns.MIME_TYPE)
+      if (path.isNotEmpty()) {
+        val folder = folderMap.getOrPut(path) {
+          FolderStatisticsRecord().apply {
+            id = path.hashCode().toString()
+            name = path.trimEnd('/').substringAfterLast('/').ifEmpty { path.trimEnd('/') }
+            this.path = path
+            fileCount = 0
+            totalSize = 0L
+            histogram = SizeHistogramRecord()
+            mediaTypeBreakdown = MediaTypeBreakdownRecord()
+          }
+        }
+        folder.fileCount++
+        folder.totalSize += size
+        when {
+          size < 1_048_576L -> folder.histogram.lessThan1MB++
+          size < 10_485_760L -> folder.histogram.from1to10MB++
+          size < 104_857_600L -> folder.histogram.from10to100MB++
+          size < 1_073_741_824L -> folder.histogram.from100MBto1GB++
+          else -> folder.histogram.greaterThan1GB++
+        }
+        when {
+          mimeType.startsWith("audio/") -> folder.mediaTypeBreakdown.audio++
+          mimeType.startsWith("video/") -> folder.mediaTypeBreakdown.video++
+          mimeType.startsWith("image/") -> folder.mediaTypeBreakdown.image++
+          else -> folder.mediaTypeBreakdown.document++
+        }
+      }
+    }
+    return folderMap.values.map { folder ->
+      folder.averageFileSize = if (folder.fileCount > 0) folder.totalSize.toDouble() / folder.fileCount else 0.0
+      folder
+    }
+  }
+
   fun mapSingle(cursor: Cursor, mediaType: String): Any? {
     if (!cursor.moveToFirst()) return null
     return when (mediaType) {

@@ -20,6 +20,12 @@ import type {
   LibraryResult,
   ArtworkResult,
   ThumbnailOptions,
+  SizeHistogram,
+  FolderStatistics,
+  IncrementalChanges,
+  MetadataPlugin,
+  LibraryQueryOptions,
+  LibraryQueryResult,
 } from "../src/MediaStoreModule.types";
 
 import { SortOrder, SortField } from "../src/MediaStoreModule.types";
@@ -248,5 +254,140 @@ describe("MediaStoreModule types", () => {
       kind: "MINI_KIND",
     };
     expect(thumb.kind).toBe("MINI_KIND");
+  });
+
+  it("should have correct SizeHistogram interface shape", () => {
+    const hist: SizeHistogram = {
+      lessThan1MB: 10,
+      from1to10MB: 5,
+      from10to100MB: 3,
+      from100MBto1GB: 1,
+      greaterThan1GB: 0,
+    };
+    expect(hist.lessThan1MB).toBe(10);
+    expect(hist.greaterThan1GB).toBe(0);
+  });
+
+  it("should have correct FolderStatistics interface shape", () => {
+    const stats: FolderStatistics = {
+      id: "abc",
+      name: "Music",
+      path: "Music/",
+      fileCount: 150,
+      totalSize: 500000000,
+      histogram: {
+        lessThan1MB: 10,
+        from1to10MB: 50,
+        from10to100MB: 80,
+        from100MBto1GB: 10,
+        greaterThan1GB: 0,
+      },
+      mediaTypeBreakdown: {
+        audio: 140,
+        video: 5,
+        image: 3,
+        document: 2,
+      },
+      averageFileSize: 3333333,
+    };
+    expect(stats.fileCount).toBe(150);
+    expect(stats.histogram.from10to100MB).toBe(80);
+    expect(stats.mediaTypeBreakdown.audio).toBe(140);
+  });
+
+  it("should have correct IncrementalChanges interface shape", () => {
+    const changes: IncrementalChanges = {
+      added: 5,
+      modified: 2,
+      removed: 1,
+      timestamp: 1700000000000,
+    };
+    expect(changes.added).toBe(5);
+    expect(changes.removed).toBe(1);
+  });
+
+  it("should have correct MetadataPlugin interface shape", () => {
+    const plugin: MetadataPlugin = {
+      id: "test-plugin",
+      name: "Test Plugin",
+      version: "1.0.0",
+      extract: (item) => ({ customField: `processed_${item.id}` }),
+    };
+    expect(plugin.id).toBe("test-plugin");
+    expect(plugin.extract({ id: "1" } as AudioItem)).toEqual({
+      customField: "processed_1",
+    });
+  });
+
+  it("should have correct LibraryQueryOptions interface shape", () => {
+    const opts: LibraryQueryOptions = {
+      sort: { field: SortField.DateAdded, order: SortOrder.Descending },
+      types: ["audio", "video"],
+      typePagination: {
+        audio: { limit: 50, offset: 0 },
+        video: { limit: 20, offset: 0 },
+      },
+      includeStatistics: true,
+    };
+    expect(opts.types).toHaveLength(2);
+    expect(opts.includeStatistics).toBe(true);
+  });
+
+  it("should have correct LibraryQueryResult interface shape", () => {
+    const result: LibraryQueryResult = {
+      audio: [],
+      videos: [],
+      images: [],
+      documents: [],
+      totalCount: 100,
+      totalSize: 500000000,
+      perTypeStatistics: {
+        audio: { count: 80, totalSize: 400000000, totalDuration: 3600000 },
+        video: { count: 15, totalSize: 80000000, totalDuration: 1200000 },
+        image: { count: 5, totalSize: 20000000 },
+        document: { count: 0, totalSize: 0 },
+      },
+      queryTime: 150,
+    };
+    expect(result.totalCount).toBe(100);
+    expect(result.queryTime).toBe(150);
+    expect(result.perTypeStatistics?.audio.count).toBe(80);
+  });
+
+  it("should support AudioItem with customMetadata", () => {
+    const audio: AudioItem = {
+      id: "1",
+      uri: "file:///test.mp3",
+      title: "Test Song",
+      artist: "Test Artist",
+      album: "Test Album",
+      albumId: "1",
+      genre: null,
+      duration: 180000,
+      size: 5000000,
+      trackNumber: 1,
+      discNumber: 1,
+      year: 2024,
+      dateAdded: 1700000000000,
+      dateModified: 1700000000000,
+      composer: null,
+      lyrics: null,
+      albumArtist: null,
+      isFavorite: false,
+      playCount: 0,
+      lastPlayed: 0,
+      bookmark: 0,
+      bitrate: 320000,
+      sampleRate: 44100,
+      channels: 2,
+      encoding: null,
+      mimeType: "audio/mpeg",
+      fileExtension: "mp3",
+      relativePath: "Music/",
+      displayName: "Test Song.mp3",
+      contentUri: "content://media/external/audio/media/1",
+      customMetadata: { myPlugin: { rating: 5 } },
+    };
+    expect(audio.customMetadata?.myPlugin).toEqual({ rating: 5 });
   });
 });

@@ -4,6 +4,8 @@ import java.util.LinkedHashMap
 
 class MediaStoreCache(private val maxSize: Int = 100) {
   private val cache = LinkedHashMap<String, CacheEntry>(maxSize, 0.75f, true)
+  private var lastRefreshTimestamp: Long = System.currentTimeMillis()
+  private val removedSinceRefresh = mutableListOf<String>()
 
   data class CacheEntry(
     val data: Any,
@@ -41,8 +43,29 @@ class MediaStoreCache(private val maxSize: Int = 100) {
   @Synchronized
   fun invalidate() {
     cache.clear()
+    lastRefreshTimestamp = System.currentTimeMillis()
   }
 
   @Synchronized
   fun size(): Int = cache.size
+
+  @Synchronized
+  fun getLastRefreshTimestamp(): Long = lastRefreshTimestamp
+
+  @Synchronized
+  fun setLastRefreshTimestamp(timestamp: Long) {
+    lastRefreshTimestamp = timestamp
+  }
+
+  @Synchronized
+  fun trackRemoved(itemId: String) {
+    removedSinceRefresh.add(itemId)
+  }
+
+  @Synchronized
+  fun getAndClearRemovedItems(): List<String> {
+    val items = removedSinceRefresh.toList()
+    removedSinceRefresh.clear()
+    return items
+  }
 }

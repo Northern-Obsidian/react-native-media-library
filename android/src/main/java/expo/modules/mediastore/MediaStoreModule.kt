@@ -140,6 +140,57 @@ class MediaStoreModule : Module() {
       result
     }
 
+    AsyncFunction("getFolderStatistics") Coroutine { folderPath: String? ->
+      val cacheKey = "folderStats:${folderPath}"
+      val cached = cache.get(cacheKey) as? List<FolderStatisticsRecord>
+      if (cached != null) return@Coroutine cached
+
+      val cursor = repository.queryFolderStatistics(folderPath)
+      val result = cursor?.use { mapper.mapFolderStatistics(it) } ?: emptyList()
+      cache.put(cacheKey, result)
+      result
+    }
+
+    AsyncFunction("refreshIncremental") Coroutine { lastTimestamp: Long? ->
+      val since = lastTimestamp ?: cache.getLastRefreshTimestamp()
+      val results = mutableMapOf<String, Any>()
+      var addedCount = 0
+      var modifiedCount = 0
+
+      val types = listOf("audio", "video", "image", "document")
+      for (type in types) {
+        val projection = when (type) {
+          "audio" -> queryBuilder.buildAudioProjection()
+          "video" -> queryBuilder.buildVideoProjection()
+          "image" -> queryBuilder.buildImageProjection()
+          "document" -> queryBuilder.buildDocumentProjection()
+          else -> continue
+        }
+        val cursor = repository.queryIncremental(since, projection, type)
+        if (cursor != null) {
+          val count = cursor.count
+          addedCount += count
+          cursor.close()
+        }
+      }
+
+      val removedItems = cache.getAndClearRemovedItems()
+      val removedCount = removedItems.size
+
+      cache.setLastRefreshTimestamp(System.currentTimeMillis())
+
+      IncrementalChangesRecord().apply {
+        added = addedCount
+        modified = modifiedCount
+        removed = removedCount
+        timestamp = System.currentTimeMillis()
+      }
+    }
+
+    AsyncFunction("getLastRefreshTimestamp") Coroutine {
+      cache.getLastRefreshTimestamp()
+    }
+
     AsyncFunction("search") Coroutine { options: SearchOptionsRecord ->
       repository.search(options)
     }
@@ -281,6 +332,9 @@ class MediaStoreModule : Module() {
           "itemId" to event.itemId,
           "uri" to event.uri
         ))
+        if (event.type == "removed") {
+          cache.trackRemoved(event.itemId)
+        }
         cache.invalidate()
       }
     }

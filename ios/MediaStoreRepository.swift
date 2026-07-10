@@ -4,6 +4,7 @@ import UIKit
 
 class MediaStoreRepository {
   private let imageManager = PHCachingImageManager()
+  static var lastRefreshTimestamp: Double = Date().timeIntervalSince1970 * 1000
 
   // MARK: - Audio
 
@@ -207,6 +208,92 @@ class MediaStoreRepository {
     }
 
     return applyPagination(applySorting(items, sort: sort), pagination: pagination)
+  }
+
+  // MARK: - Folder Statistics
+
+  func getFolderStatistics(folderPath: String?) -> [[String: Any?]] {
+    var folderMap: [String: [String: Any?]] = [:]
+
+    let albums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, options: nil)
+    albums.enumerateObjects { collection, _, _ in
+      let assets = PHAsset.fetchAssets(in: collection, options: nil)
+      if assets.count > 0 {
+        let path = collection.localizedTitle ?? ""
+
+        if let filterPath = folderPath, !path.hasPrefix(filterPath) {
+          return
+        }
+
+        var totalSize: Double = 0
+        var histogram: [String: Int] = [
+          "lessThan1MB": 0, "from1to10MB": 0,
+          "from10to100MB": 0, "from100MBto1GB": 0, "greaterThan1GB": 0
+        ]
+        var typeBreakdown: [String: Int] = ["audio": 0, "video": 0, "image": 0, "document": 0]
+
+        assets.enumerateObjects { asset, _, _ in
+          let size = self.getAssetFileSize(asset)
+          totalSize += size
+
+          let sizeMB = size / (1024 * 1024)
+          if sizeMB < 1 { histogram["lessThan1MB"]! += 1 }
+          else if sizeMB < 10 { histogram["from1to10MB"]! += 1 }
+          else if sizeMB < 100 { histogram["from10to100MB"]! += 1 }
+          else if sizeMB < 1024 { histogram["from100MBto1GB"]! += 1 }
+          else { histogram["greaterThan1GB"]! += 1 }
+
+          switch asset.mediaType {
+          case .audio: typeBreakdown["audio"]! += 1
+          case .video: typeBreakdown["video"]! += 1
+          case .image: typeBreakdown["image"]! += 1
+          default: typeBreakdown["document"]! += 1
+          }
+        }
+
+        let avgSize = assets.count > 0 ? Double(totalSize) / Double(assets.count) : 0.0
+
+        folderMap[path] = [
+          "id": path,
+          "name": path,
+          "path": path,
+          "fileCount": assets.count,
+          "totalSize": totalSize,
+          "histogram": histogram,
+          "mediaTypeBreakdown": typeBreakdown,
+          "averageFileSize": avgSize
+        ]
+      }
+    }
+
+    return Array(folderMap.values)
+  }
+
+  // MARK: - Incremental Refresh
+
+  func refreshIncremental(lastTimestamp: Double?) -> [String: Any?] {
+    let since = lastTimestamp ?? MediaStoreRepository.lastRefreshTimestamp
+    let sinceDate = Date(timeIntervalSince1970: since / 1000)
+    var addedCount = 0
+    var modifiedCount = 0
+
+    let fetchOptions = PHFetchOptions()
+    fetchOptions.predicate = NSPredicate(format: "modificationDate >= %@", sinceDate as NSDate)
+
+    let audioResult = PHAsset.fetchAssets(with: .audio, options: fetchOptions)
+    let videoResult = PHAsset.fetchAssets(with: .video, options: fetchOptions)
+    let imageResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+
+    addedCount += audioResult.count + videoResult.count + imageResult.count
+
+    MediaStoreRepository.lastRefreshTimestamp = Date().timeIntervalSince1970 * 1000
+
+    return [
+      "added": addedCount,
+      "modified": modifiedCount,
+      "removed": 0,
+      "timestamp": MediaStoreRepository.lastRefreshTimestamp
+    ]
   }
 
   // MARK: - Search

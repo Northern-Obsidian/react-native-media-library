@@ -29,6 +29,7 @@ export interface AudioItem {
   relativePath: string;
   displayName: string;
   contentUri: string;
+  customMetadata?: Record<string, unknown>;
 }
 
 export interface VideoItem {
@@ -48,6 +49,7 @@ export interface VideoItem {
   dateModified: number;
   resolution: string;
   orientation: number;
+  customMetadata?: Record<string, unknown>;
 }
 
 export interface ImageItem {
@@ -68,6 +70,7 @@ export interface ImageItem {
   displayName: string;
   dateAdded: number;
   dateModified: number;
+  customMetadata?: Record<string, unknown>;
 }
 
 export interface DocumentItem {
@@ -80,6 +83,7 @@ export interface DocumentItem {
   relativePath: string;
   dateAdded: number;
   dateModified: number;
+  customMetadata?: Record<string, unknown>;
 }
 
 export interface Album {
@@ -257,4 +261,78 @@ export interface ThumbnailOptions {
   width?: number;
   height?: number;
   kind?: "MINI_KIND" | "FULL_SCREEN_KIND" | "MICRO_KIND";
+}
+
+export interface SizeHistogram {
+  lessThan1MB: number;
+  from1to10MB: number;
+  from10to100MB: number;
+  from100MBto1GB: number;
+  greaterThan1GB: number;
+}
+
+export interface MediaTypeBreakdown {
+  audio: number;
+  video: number;
+  image: number;
+  document: number;
+}
+
+export interface FolderStatistics {
+  id: string;
+  name: string;
+  path: string;
+  fileCount: number;
+  totalSize: number;
+  histogram: SizeHistogram;
+  mediaTypeBreakdown: MediaTypeBreakdown;
+  averageFileSize: number;
+}
+
+export interface IncrementalChanges {
+  added: number;
+  modified: number;
+  removed: number;
+  timestamp: number;
+}
+
+export interface MetadataPlugin {
+  id: string;
+  name: string;
+  version: string;
+  extract: (
+    item: AudioItem | VideoItem | ImageItem | DocumentItem
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
+}
+
+export interface LibraryPerTypeStatistics {
+  audio: { count: number; totalSize: number; totalDuration: number };
+  video: { count: number; totalSize: number; totalDuration: number };
+  image: { count: number; totalSize: number };
+  document: { count: number; totalSize: number };
+}
+
+export interface LibraryQueryOptions {
+  sort?: SortOptions;
+  filter?: FilterOptions;
+  pagination?: PaginationOptions;
+  types?: ("audio" | "video" | "image" | "document")[];
+  typePagination?: {
+    audio?: PaginationOptions;
+    video?: PaginationOptions;
+    image?: PaginationOptions;
+    document?: PaginationOptions;
+  };
+  includeStatistics?: boolean;
+}
+
+export interface LibraryQueryResult {
+  audio: AudioItem[];
+  videos: VideoItem[];
+  images: ImageItem[];
+  documents: DocumentItem[];
+  totalCount: number;
+  totalSize: number;
+  perTypeStatistics?: LibraryPerTypeStatistics;
+  queryTime: number;
 }
