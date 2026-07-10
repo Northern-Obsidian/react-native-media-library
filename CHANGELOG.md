@@ -1,5 +1,47 @@
 # Changelog
 
+## 2.0.0 (2026-07-10)
+
+### Breaking Changes
+
+- **iOS Support**: Now works on both Android (MediaStore) and iOS (Photos Framework)
+- **Typed Returns**: `getRecent`, `getFavorites`, `getLargestFiles` now return properly typed records instead of raw maps
+- **Pagination Applied**: `limit` and `offset` in `PaginationOptions` now actually work (were ignored in v1)
+- **Cache Wired**: LRU cache is now integrated into all query functions (was built but unused in v1)
+
+### New Features
+
+- **iOS MediaLibrary**: Full iOS support using `PHAsset` and `Photos.framework`
+  - Audio, video, image queries with metadata
+  - Album, artist, genre, playlist aggregation
+  - Search with `CONTAINS[cd]` matching
+  - Thumbnail generation via `PHImageManager`
+  - Real-time change observation via `PHPhotoLibraryChangeObserver`
+  - Permission handling via `PHPhotoLibrary.requestAuthorization`
+- **Thumbnail Generation**: `getVideoThumbnail` and `getImageThumbnail` now return actual thumbnail file URIs
+  - Android: Uses `ContentResolver.loadThumbnail()` (API 29+) with fallback to `MediaStore.Thumbnails`
+  - iOS: Uses `PHImageManager.requestImage()` with configurable size
+- **Duplicate Detection**: `getDuplicates` now groups files by size + MD5 hash
+- **Document Statistics**: `getStatistics` now includes document counts and sizes
+- **ExifInterface**: Image metadata now reads camera make/model from EXIF data
+
+### Bug Fixes
+
+- **SQL Injection**: Fixed unsafe string interpolation in query filters (now uses `escapeSql()`)
+- **Broken Extensions Filter**: Fixed `LIKE '%.' || $quoted` syntax to proper `LIKE '%.ext'`
+- **Hardcoded Mapper Values**: Audio `isFavorite` now reads `IS_FAVORITE` column (API 29+)
+- **Video/Image Metadata**: `relativePath` now read from cursor instead of hardcoded empty string
+- **Image GPS**: `gpsLatitude`/`gpsLongitude` now read from `MediaStore.Images.Media` columns
+- **Permissions Request**: `requestPermissions()` now actually prompts the user (was a no-op)
+- **Genre/Playlist Queries**: Now respect sort and pagination parameters
+- **Video Rotation**: Now reads `ORIENTATION` column instead of hardcoded 0
+
+### Improvements
+
+- **Cache Auto-Invalidation**: Cache automatically invalidates on `onMediaChange` events
+- **iOS Observers**: `PHPhotoLibraryChangeObserver` properly maps insert/update/remove events
+- **Sort Support**: Genre and playlist queries now support sorting
+
 ## 1.0.0 (2025-07-10)
 
 ### Initial Release

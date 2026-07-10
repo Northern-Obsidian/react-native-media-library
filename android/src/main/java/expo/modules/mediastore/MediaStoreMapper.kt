@@ -2,12 +2,15 @@ package expo.modules.mediastore
 
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.provider.MediaStore.Files.FileColumns
+import androidx.exifinterface.media.ExifInterface
 import expo.modules.mediastore.models.*
 import expo.modules.mediastore.utils.ArtworkUtils
 import expo.modules.mediastore.utils.CursorUtils
 import expo.modules.mediastore.utils.MimeUtils
+import java.io.File
 
 class MediaStoreMapper {
   fun mapAudio(cursor: Cursor): List<AudioRecord> {
@@ -38,7 +41,9 @@ class MediaStoreMapper {
       composer = CursorUtils.getStringOrNull(cursor, MediaStore.Audio.Media.COMPOSER)
       lyrics = null
       albumArtist = CursorUtils.getStringOrNull(cursor, MediaStore.Audio.Media.ALBUM_ARTIST)
-      isFavorite = false
+      isFavorite = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        CursorUtils.getInt(cursor, MediaStore.Audio.Media.IS_FAVORITE) == 1
+      } else false
       playCount = 0
       lastPlayed = 0L
       bookmark = CursorUtils.getLong(cursor, MediaStore.Audio.Media.BOOKMARK)
@@ -64,18 +69,20 @@ class MediaStoreMapper {
 
   fun mapVideoRow(cursor: Cursor): VideoRecord {
     val data = CursorUtils.getString(cursor, MediaStore.Video.Media.DATA)
+    val width = CursorUtils.getInt(cursor, MediaStore.Video.Media.WIDTH)
+    val height = CursorUtils.getInt(cursor, MediaStore.Video.Media.HEIGHT)
     return VideoRecord().apply {
       id = CursorUtils.getLong(cursor, MediaStore.Video.Media._ID).toString()
       uri = data
       title = CursorUtils.getString(cursor, MediaStore.Video.Media.TITLE)
       duration = CursorUtils.getLong(cursor, MediaStore.Video.Media.DURATION)
-      width = CursorUtils.getInt(cursor, MediaStore.Video.Media.WIDTH)
-      height = CursorUtils.getInt(cursor, MediaStore.Video.Media.HEIGHT)
+      this.width = width
+      this.height = height
       frameRate = null
-      rotation = 0
+      rotation = CursorUtils.getInt(cursor, MediaStore.Video.Media.ORIENTATION)
       size = CursorUtils.getLong(cursor, MediaStore.Video.Media.SIZE)
       mimeType = CursorUtils.getString(cursor, MediaStore.Video.Media.MIME_TYPE)
-      relativePath = ""
+      relativePath = CursorUtils.getString(cursor, MediaStore.Video.Media.RELATIVE_PATH)
       displayName = CursorUtils.getString(cursor, MediaStore.Video.Media.DISPLAY_NAME)
       dateAdded = CursorUtils.getLong(cursor, MediaStore.Video.Media.DATE_ADDED) * 1000L
       dateModified = CursorUtils.getLong(cursor, MediaStore.Video.Media.DATE_MODIFIED) * 1000L
@@ -94,6 +101,18 @@ class MediaStoreMapper {
 
   fun mapImageRow(cursor: Cursor): ImageRecord {
     val data = CursorUtils.getString(cursor, MediaStore.Images.Media.DATA)
+    var cameraMake: String? = null
+    var cameraModel: String? = null
+    if (data.isNotEmpty()) {
+      try {
+        val file = File(data)
+        if (file.exists()) {
+          val exif = ExifInterface(data)
+          cameraMake = exif.getAttribute(ExifInterface.TAG_MAKE)
+          cameraModel = exif.getAttribute(ExifInterface.TAG_MODEL)
+        }
+      } catch (_: Exception) {}
+    }
     return ImageRecord().apply {
       id = CursorUtils.getLong(cursor, MediaStore.Images.Media._ID).toString()
       uri = data
@@ -101,14 +120,14 @@ class MediaStoreMapper {
       width = CursorUtils.getInt(cursor, MediaStore.Images.Media.WIDTH)
       height = CursorUtils.getInt(cursor, MediaStore.Images.Media.HEIGHT)
       orientation = CursorUtils.getInt(cursor, MediaStore.Images.Media.ORIENTATION)
-      cameraMake = null
-      cameraModel = null
+      this.cameraMake = cameraMake
+      this.cameraModel = cameraModel
       dateTaken = CursorUtils.getLong(cursor, MediaStore.Images.Media.DATE_TAKEN)
-      gpsLatitude = null
-      gpsLongitude = null
+      gpsLatitude = CursorUtils.getDoubleOrNull(cursor, MediaStore.Images.Media.LATITUDE)
+      gpsLongitude = CursorUtils.getDoubleOrNull(cursor, MediaStore.Images.Media.LONGITUDE)
       mimeType = CursorUtils.getString(cursor, MediaStore.Images.Media.MIME_TYPE)
       size = CursorUtils.getLong(cursor, MediaStore.Images.Media.SIZE)
-      relativePath = ""
+      relativePath = CursorUtils.getString(cursor, MediaStore.Images.Media.RELATIVE_PATH)
       displayName = CursorUtils.getString(cursor, MediaStore.Images.Media.DISPLAY_NAME)
       dateAdded = CursorUtils.getLong(cursor, MediaStore.Images.Media.DATE_ADDED) * 1000L
       dateModified = CursorUtils.getLong(cursor, MediaStore.Images.Media.DATE_MODIFIED) * 1000L
@@ -232,25 +251,34 @@ class MediaStoreMapper {
     }
   }
 
-  fun mapGeneric(cursor: Cursor): List<Map<String, Any?>> {
-    val items = mutableListOf<Map<String, Any?>>()
-    val columns = cursor.columnNames
+  fun mapGenericToAudio(cursor: Cursor): List<AudioRecord> {
+    val items = mutableListOf<AudioRecord>()
     while (cursor.moveToNext()) {
-      val row = mutableMapOf<String, Any?>()
-      for (col in columns) {
-        val index = cursor.getColumnIndex(col)
-        if (index >= 0) {
-          row[col] = when (cursor.getType(index)) {
-            Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(index)
-            Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(index)
-            Cursor.FIELD_TYPE_STRING -> cursor.getString(index)
-            Cursor.FIELD_TYPE_BLOB -> null
-            Cursor.FIELD_TYPE_NULL -> null
-            else -> null
-          }
-        }
-      }
-      items.add(row)
+      items.add(mapAudioRow(cursor))
+    }
+    return items
+  }
+
+  fun mapGenericToVideo(cursor: Cursor): List<VideoRecord> {
+    val items = mutableListOf<VideoRecord>()
+    while (cursor.moveToNext()) {
+      items.add(mapVideoRow(cursor))
+    }
+    return items
+  }
+
+  fun mapGenericToImage(cursor: Cursor): List<ImageRecord> {
+    val items = mutableListOf<ImageRecord>()
+    while (cursor.moveToNext()) {
+      items.add(mapImageRow(cursor))
+    }
+    return items
+  }
+
+  fun mapGenericToDocument(cursor: Cursor): List<DocumentRecord> {
+    val items = mutableListOf<DocumentRecord>()
+    while (cursor.moveToNext()) {
+      items.add(mapDocumentRow(cursor))
     }
     return items
   }

@@ -1,9 +1,11 @@
 package expo.modules.mediastore
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class MediaStorePermissions(private val context: Context) {
@@ -28,10 +30,59 @@ class MediaStorePermissions(private val context: Context) {
   }
 
   suspend fun request(): Map<String, Any?> {
+    if (isAlreadyGranted()) {
+      return checkStatus()
+    }
+
+    val activity = getActivity()
+    if (activity != null) {
+      val permissions = getRequiredPermissions()
+      ActivityCompat.requestPermissions(activity, permissions, PERMISSION_REQUEST_CODE)
+
+      // Wait briefly for the permission dialog result, then check status
+      kotlinx.coroutines.delay(500)
+    }
+
     return checkStatus()
+  }
+
+  private fun isAlreadyGranted(): Boolean {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      return isPermissionGranted(Manifest.permission.READ_MEDIA_AUDIO) &&
+        isPermissionGranted(Manifest.permission.READ_MEDIA_VIDEO) &&
+        isPermissionGranted(Manifest.permission.READ_MEDIA_IMAGES)
+    } else {
+      return isPermissionGranted(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+  }
+
+  private fun getRequiredPermissions(): Array<String> {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      arrayOf(
+        Manifest.permission.READ_MEDIA_AUDIO,
+        Manifest.permission.READ_MEDIA_VIDEO,
+        Manifest.permission.READ_MEDIA_IMAGES
+      )
+    } else {
+      arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+  }
+
+  private fun getActivity(): Activity? {
+    return try {
+      val activityClass = Class.forName("expo.modules.ReactActivityWrapper")
+      val method = activityClass.getMethod("getCurrentActivity")
+      method.invoke(null) as? Activity
+    } catch (_: Exception) {
+      null
+    }
   }
 
   private fun isPermissionGranted(permission: String): Boolean {
     return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+  }
+
+  companion object {
+    private const val PERMISSION_REQUEST_CODE = 1984
   }
 }

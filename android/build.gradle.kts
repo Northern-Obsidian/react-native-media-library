@@ -27,4 +27,5 @@ android {
 
 dependencies {
   implementation(project(":expo-modules-core"))
+  implementation("androidx.exifinterface:exifinterface:1.3.7")
 }

@@ -97,6 +97,10 @@ object MimeUtils {
     }
   }
 
+  fun getDocumentMimeTypes(): List<String> {
+    return documentMimeTypes.keys.toList()
+  }
+
   fun getDocumentMimeFilter(): String {
     val mimes = listOf(
       "application/pdf", "application/msword",

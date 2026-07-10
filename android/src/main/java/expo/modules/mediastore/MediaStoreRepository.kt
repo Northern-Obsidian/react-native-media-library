@@ -102,23 +102,33 @@ class MediaStoreRepository(private val context: Context) {
     )
   }
 
-  fun queryGenres(): Cursor? {
+  fun queryGenres(
+    projection: Array<String>?,
+    selection: String?,
+    selectionArgs: Array<String>?,
+    sortOrder: String?
+  ): Cursor? {
     return contentResolver.query(
       MediaStore.Audio.Genres.EXTERNAL_CONTENT_URI,
-      null,
-      null,
-      null,
-      null
+      projection,
+      selection,
+      selectionArgs,
+      sortOrder
     )
   }
 
-  fun queryPlaylists(): Cursor? {
+  fun queryPlaylists(
+    projection: Array<String>?,
+    selection: String?,
+    selectionArgs: Array<String>?,
+    sortOrder: String?
+  ): Cursor? {
     return contentResolver.query(
       MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI,
-      null,
-      null,
-      null,
-      null
+      projection,
+      selection,
+      selectionArgs,
+      sortOrder
     )
   }
 
@@ -155,64 +165,51 @@ class MediaStoreRepository(private val context: Context) {
     val searchArgs = arrayOf("%$query%", "%$query%")
     val types = options.types ?: listOf("audio", "video", "image", "document")
 
+    val mapper = MediaStoreMapper()
+    val queryBuilder = MediaStoreQueryBuilder()
+
     val audioItems = if (types.contains("audio")) {
       queryAudio(
-        arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA),
+        queryBuilder.buildAudioProjection(),
         searchFilter,
         searchArgs,
         null
       )?.use { cursor ->
-        val items = mutableListOf<AudioRecord>()
-        while (cursor.moveToNext()) {
-          items.add(MediaStoreMapper().mapAudioRow(cursor))
-        }
-        items
+        mapper.mapGenericToAudio(cursor)
       } ?: emptyList()
     } else emptyList()
 
     val videoItems = if (types.contains("video")) {
       queryVideo(
-        arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.TITLE, MediaStore.Video.Media.DURATION, MediaStore.Video.Media.WIDTH, MediaStore.Video.Media.HEIGHT, MediaStore.Video.Media.DATA),
+        queryBuilder.buildVideoProjection(),
         searchFilter,
         searchArgs,
         null
       )?.use { cursor ->
-        val items = mutableListOf<VideoRecord>()
-        while (cursor.moveToNext()) {
-          items.add(MediaStoreMapper().mapVideoRow(cursor))
-        }
-        items
+        mapper.mapGenericToVideo(cursor)
       } ?: emptyList()
     } else emptyList()
 
     val imageItems = if (types.contains("image")) {
       queryImages(
-        arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.TITLE, MediaStore.Images.Media.WIDTH, MediaStore.Images.Media.HEIGHT, MediaStore.Images.Media.DATA),
+        queryBuilder.buildImageProjection(),
         searchFilter,
         searchArgs,
         null
       )?.use { cursor ->
-        val items = mutableListOf<ImageRecord>()
-        while (cursor.moveToNext()) {
-          items.add(MediaStoreMapper().mapImageRow(cursor))
-        }
-        items
+        mapper.mapGenericToImage(cursor)
       } ?: emptyList()
     } else emptyList()
 
     val documentItems = if (types.contains("document")) {
       val docMimeFilter = MimeUtils.getDocumentMimeFilter()
       queryDocuments(
-        arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.TITLE, MediaStore.Files.FileColumns.SIZE, MediaStore.Files.FileColumns.MIME_TYPE, MediaStore.Files.FileColumns.DATA),
+        queryBuilder.buildDocumentProjection(),
         "($searchFilter) AND (${MediaStore.Files.FileColumns.MIME_TYPE} IN (${docMimeFilter}))",
         searchArgs,
         null
       )?.use { cursor ->
-        val items = mutableListOf<DocumentRecord>()
-        while (cursor.moveToNext()) {
-          items.add(MediaStoreMapper().mapDocumentRow(cursor))
-        }
-        items
+        mapper.mapGenericToDocument(cursor)
       } ?: emptyList()
     } else emptyList()
 
@@ -255,6 +252,19 @@ class MediaStoreRepository(private val context: Context) {
     queryImages(arrayOf("COUNT(*)", "SUM(${MediaStore.Images.Media.SIZE})"), null, null, null)?.use { cursor ->
       if (cursor.moveToFirst()) {
         totalImages = cursor.getInt(0)
+        totalSize += cursor.getLong(1)
+      }
+    }
+
+    val docMimeFilter = MimeUtils.getDocumentMimeFilter()
+    queryDocuments(
+      arrayOf("COUNT(*)", "SUM(${MediaStore.Files.FileColumns.SIZE})"),
+      "${MediaStore.Files.FileColumns.MIME_TYPE} IN ($docMimeFilter)",
+      null,
+      null
+    )?.use { cursor ->
+      if (cursor.moveToFirst()) {
+        totalDocuments = cursor.getInt(0)
         totalSize += cursor.getLong(1)
       }
     }
