@@ -1,8 +1,0 @@
-node_modules/
-build/
-.gradle/
-*.iml
-.idea/
-.DS_Store
-*.class
-*.log

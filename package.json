@@ -1,5 +1,5 @@
 {
-  "name": "@cadmus11/mediastore",
+  "name": "@cadmus11/react-native-mediastore",
   "version": "1.0.0",
   "description": "Universal high-performance media indexing library for Android using MediaStore",
   "main": "build/index.js",
@@ -26,11 +26,14 @@
   "bugs": {
     "url": "https://github.com/Cadmus11/-cadmus11-expo-mediastore.git/issues"
   },
-  "author": "",
+  "author": "cadmus11",
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "clean": "rimraf build",
     "watch": "tsc --watch --project tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "node -e \"console.log('No tests configured yet')\"",
     "prepare": "npm run build"
   },
   "files": [

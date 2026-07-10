@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "MediaStore Example",
+    "slug": "react-native-mediastore-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "react-native-mediastore-example",
+    "platforms": ["android"],
+    "plugins": ["@cadmus11/react-native-mediastore"]
+  }
+}

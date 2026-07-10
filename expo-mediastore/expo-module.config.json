@@ -1,9 +1,0 @@
-{
-  "platforms": ["android", "ios"],
-  "apple": {
-    "modules": ["MediaStoreModule"]
-  },
-  "android": {
-    "modules": ["expo.modules.mediastore.MediaStoreModule"]
-  }
-}
