@@ -1,8 +1,8 @@
 # @obsidian_north/react-native-mediastore
 
-**Universal high-performance media indexing library for Android using MediaStore.**
+**Universal high-performance media indexing library for Android and iOS.**
 
-A reusable Expo Module that provides fast, production-grade access to media and indexed documents on Android devices by leveraging the native MediaStore database instead of recursive filesystem scanning.
+A reusable Expo Module that provides fast, production-grade access to media and indexed documents on Android (via MediaStore) and iOS (via Photos Framework) — no recursive filesystem scanning.
 
 <div align="center">
 
@@ -26,17 +26,18 @@ Expo Module (expo-module-core)
  ├── Permission Manager
  ├── Cache Manager (LRU + TTL)
  ├── Search Engine
- ├── ContentObserver
- ├── Repository (MediaStore queries)
+ ├── Observer (ContentObserver / PHPhotoLibraryChangeObserver)
+ ├── Repository
  │
- ▼
-MediaStore (Android SQLite Index)
+ ├─── Android ──→ MediaStore (SQLite Index) ──→ ContentResolver
+ │                                              │
+ │                                              ▼
+ │                                         Cursor → Mapper → Domain Models → JSON
  │
- ▼
-ContentResolver
- │
- ▼
-Cursor → Mapper → Domain Models → JSON
+ └─── iOS ─────→ Photos Framework (PHAsset) ──→ PHImageManager / PHAssetFetchRequest
+                                                 │
+                                                 ▼
+                                            PHAsset → Domain Models → JSON
 ```
 
 ### Query Flow
@@ -51,10 +52,10 @@ Permission Check ─── DENIED ──→ PermissionDenied error
 Cache Lookup ─── HIT ──→ Return cached result
  │
  ▼ (miss)
-MediaStore Query (ContentResolver.query)
+Native Query (ContentResolver / PHAsset)
  │
  ▼
-Cursor Mapping (typed projection)
+Object Mapping (typed projection / PHAsset properties)
  │
  ▼
 JSON Serialization
@@ -69,13 +70,13 @@ React Native
 JS Thread ──→ async/await Promise
  │
  ▼
-Native Module Thread (coroutine dispatcher)
+Native Module Thread (coroutine dispatcher / DispatchQueue)
  │
  ▼
-IO Dispatcher (Dispatchers.IO)
+IO Dispatcher (Dispatchers.IO) / Background Queue
  │
  ▼
-MediaStore (ContentResolver)
+MediaStore / Photos Framework
  │
  ▼
 Back to JS (Promise resolved)
@@ -89,7 +90,7 @@ All queries execute on background dispatchers — the UI thread is never blocked
 100,000 songs
  │
  ▼
-Cursor (lazy, not loaded entirely)
+Cursor / PHFetchResult (lazy, not loaded entirely)
  │
  ▼
 Stream rows individually
@@ -101,7 +102,7 @@ Map each row → JSON object
 Collect results
  │
  ▼
-Dispose Cursor
+Dispose Cursor / Release PHFetchResult
 ```
 
 No entire library is loaded into memory. Each row is mapped and collected incrementally, then the cursor is closed in a `use` block.
@@ -110,19 +111,20 @@ No entire library is loaded into memory. Each row is mapped and collected increm
 
 ## Features
 
-- **Blazing fast** — queries the native MediaStore database directly, no recursive directory scans
-- **All media types** — audio, video, images, and documents (PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, EPUB, RTF, CSV, JSON, XML, ZIP, RAR, 7Z)
+- **Cross-platform** — Android (MediaStore) and iOS (Photos Framework) with a unified API
+- **Blazing fast** — queries the native media database directly, no recursive directory scans
+- **All media types** — audio, video, images, and documents (Android only; PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, EPUB, RTF, CSV, JSON, XML, ZIP, RAR, 7Z)
 - **Rich metadata** — duration, resolution, bitrate, EXIF, GPS, album art, and more
 - **Sorted & filtered queries** — sort by name, date, size, duration, artist, etc. Filter by MIME, extension, folder, date range, size range, and more
 - **Full-text search** — prefix, partial, case-insensitive, multi-keyword, unicode-aware
 - **Pagination** — limit/offset and cursor-based pagination on every API
-- **Real-time change observation** — `ContentObserver` fires events when files are added, removed, or modified
-- **Permissions-aware** — scoped `READ_MEDIA_*` permissions on Android 13+, automatic fallback
+- **Real-time change observation** — `ContentObserver` (Android) / `PHPhotoLibraryChangeObserver` (iOS) fires events when files are added, removed, or modified
+- **Permissions-aware** — scoped `READ_MEDIA_*` permissions on Android 13+, `PHPhotoLibrary` authorization on iOS, automatic fallback
 - **LRU caching** — optional in-memory cache with configurable TTL, auto-invalidated on changes
 - **Fully typed** — complete TypeScript definitions, no `any`
 - **Reactive** — React hook `useMediaChangeEvent` for real-time updates
 - **Batch queries** — `getLibrary()` returns all media types in one native call
-- **Thumbnail/artwork** — helper methods for album art and video thumbnails
+- **Thumbnail/artwork** — helper methods for album art and video/image thumbnails
 
 ---
 
@@ -162,22 +164,25 @@ npx expo install @obsidian_north/react-native-mediastore
 
 ## Prerequisites
 
-- Expo SDK 50+ or React Native with New Architecture enabled
-- Android API 21+ (Android 5.0)
-- For Android 13+ (API 33): granular media permissions are requested automatically
-- For Android 12 and below: `READ_EXTERNAL_STORAGE` permission is required
+- Expo SDK 52+ or React Native with New Architecture enabled
+- **Android**: API 21+ (Android 5.0)
+  - Android 13+ (API 33): granular media permissions are requested automatically
+  - Android 12 and below: `READ_EXTERNAL_STORAGE` permission is required
+- **iOS**: iOS 13.0+
+  - Photos Framework permission is requested automatically via `PHPhotoLibrary.requestAuthorization`
 
 ### Permissions Matrix
 
-| Android | API Level | Permission |
-|---------|-----------|-----------|
-| 15 | 35 | `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES` |
-| 14 | 34 | `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES` |
-| 13 | 33 | `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES` |
-| 12 | 32 | `READ_EXTERNAL_STORAGE` |
-| 11 | 30–31 | `READ_EXTERNAL_STORAGE` |
-| 10 | 29 | `READ_EXTERNAL_STORAGE` |
-| 5–9 | 21–28 | `READ_EXTERNAL_STORAGE` |
+| Platform | Version | Permission |
+|----------|---------|-----------|
+| iOS | 13.0+ | `PHPhotoLibrary` (read/write authorization) |
+| Android 15 | 35 | `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES` |
+| Android 14 | 34 | `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES` |
+| Android 13 | 33 | `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES` |
+| Android 12 | 32 | `READ_EXTERNAL_STORAGE` |
+| Android 11 | 30–31 | `READ_EXTERNAL_STORAGE` |
+| Android 10 | 29 | `READ_EXTERNAL_STORAGE` |
+| Android 5–9 | 21–28 | `READ_EXTERNAL_STORAGE` |
 
 Call `requestPermissions()` before querying media on first launch.
 
@@ -187,10 +192,12 @@ Call `requestPermissions()` before querying media on first launch.
 
 | Feature | **react-native-mediastore** | expo-file-system | react-native-fs |
 |---------|:---------------------------:|:----------------:|:----------------:|
+| Android | ✅ | ✅ | ✅ |
+| iOS | ✅ | ✅ | ✅ |
 | Audio (music) | ✅ | ❌ | ⚠️ |
 | Video | ✅ | ❌ | ⚠️ |
 | Images | ✅ | ❌ | ⚠️ |
-| Documents | ✅ | ❌ | ⚠️ |
+| Documents | ✅ (Android) | ❌ | ⚠️ |
 | Rich metadata | ✅ | ❌ | ❌ |
 | Album art | ✅ | ❌ | ❌ |
 | EXIF/GPS | ✅ | ❌ | ❌ |
@@ -264,12 +271,12 @@ function MediaWatcher() {
 | `getAudio(sort?, filter?, pagination?)` | `AudioItem[]` | Fetch audio tracks |
 | `getVideos(sort?, filter?, pagination?)` | `VideoItem[]` | Fetch video files |
 | `getImages(sort?, filter?, pagination?)` | `ImageItem[]` | Fetch images |
-| `getDocuments(sort?, filter?, pagination?)` | `DocumentItem[]` | Fetch documents |
+| `getDocuments(sort?, filter?, pagination?)` | `DocumentItem[]` | Fetch documents (Android only) |
 | `getAlbums(sort?, filter?, pagination?)` | `Album[]` | Fetch audio albums |
 | `getArtists(sort?, pagination?)` | `Artist[]` | Fetch artists |
 | `getGenres(sort?, pagination?)` | `Genre[]` | Fetch genres |
 | `getPlaylists(sort?, pagination?)` | `Playlist[]` | Fetch playlists |
-| `getFolders(sort?, filter?, pagination?)` | `Folder[]` | Aggregate files by folder |
+| `getFolders(sort?, filter?, pagination?)` | `Folder[]` | Aggregate files by folder (Android only) |
 
 ### Search & Lookup
 
@@ -286,7 +293,7 @@ function MediaWatcher() {
 | `getRecent(mediaType?, limit?)` | `(AudioItem \| VideoItem \| ImageItem \| DocumentItem)[]` | Most recently added items |
 | `getFavorites(mediaType?, sort?, pagination?)` | `(AudioItem \| VideoItem \| ImageItem \| DocumentItem)[]` | Starred/favorited items |
 | `getLargestFiles(mediaType?, limit?)` | `(AudioItem \| VideoItem \| ImageItem \| DocumentItem)[]` | Largest files by size |
-| `getDuplicates(mediaType?)` | `DuplicateItem[]` | Detect duplicate files |
+| `getDuplicates(mediaType?)` | `DuplicateItem[]` | Detect duplicate files (Android only) |
 | `getStatistics()` | `MediaStoreStatistics` | Aggregate counts and sizes |
 | `getLibrary(sort?, filter?, pagination?)` | `LibraryResult` | Audio, video, images, docs in one batch |
 
@@ -316,7 +323,7 @@ Every thrown error has a structured `MediaStoreError` with a typed `code`:
 | Code | Meaning |
 |------|---------|
 | `PERMISSION_DENIED` | Required media permissions not granted |
-| `QUERY_FAILED` | MediaStore query failed (database error) |
+| `QUERY_FAILED` | MediaStore / Photos query failed (database error) |
 | `INVALID_ARGUMENTS` | Invalid sort field, MIME type, or filter option |
 | `INVALID_SORT_FIELD` | The requested sort field is not valid for this media type |
 | `INVALID_MIME_TYPE` | The MIME type filter does not match any known type |
@@ -340,7 +347,7 @@ try {
 
 ## Event System
 
-The module uses Android's `ContentObserver` to monitor MediaStore and emits events to JavaScript.
+The module uses Android's `ContentObserver` and iOS's `PHPhotoLibraryChangeObserver` to monitor media changes and emit events to JavaScript.
 
 ### Events
 
@@ -368,7 +375,9 @@ function MyComponent() {
 
 ---
 
-## Folder Support
+## Platform Support
+
+### Android
 
 `getFolders()` aggregates files into folders by their `relativePath`.
 
@@ -386,6 +395,18 @@ interface Folder {
 - **Counts**: `fileCount` is the number of files in that folder
 - **Sorting**: Supports sort fields like `name`, `dateAdded`, `dateModified`, `fileSize`
 - **Filtering**: Supports `mimeTypes`, `extensions`, `folder` (deep path prefix), `minSize`/`maxSize`
+
+### iOS
+
+iOS uses Apple's Photos Framework (`PHAsset`) for media indexing:
+
+- **Audio, video, image** queries with metadata via `PHAsset` properties
+- **Album, artist, genre, playlist** aggregation via `PHAssetCollection`
+- **Search** with `CONTAINS[cd]` matching (case/diacritic-insensitive)
+- **Thumbnail generation** via `PHImageManager.requestImage()`
+- **Real-time changes** via `PHPhotoLibraryChangeObserver`
+- **Documents** return an empty array (no Photos Framework equivalent)
+- **Folders** return an empty array (no equivalent aggregation)
 
 ---
 
@@ -433,12 +454,12 @@ Return result
 Observer fires cacheInvalidated
  │
  ▼
-Cache cleared → next query goes to MediaStore
+Cache cleared → next query goes to native DB
 ```
 
-- **TTL**: Configurable time-to-live per query (default: 60s)
-- **Eviction**: LRU-based when cache reaches max entries
-- **Invalidation**: Automatic on MediaStore change events
+- **TTL**: Configurable time-to-live per query (default: 30s)
+- **Eviction**: LRU-based when cache reaches max entries (100)
+- **Invalidation**: Automatic on media change events
 - **Refresh**: Call `refresh()` to manually clear all caches
 
 ---
@@ -665,6 +686,93 @@ interface DocumentItem {
 }
 ```
 
+### Album
+
+```typescript
+interface Album {
+  id: string; title: string; artist: string;
+  songCount: number; duration: number;
+  artworkUri: string | null; dateAdded: number; year: number | null;
+}
+```
+
+### Artist
+
+```typescript
+interface Artist {
+  id: string; name: string;
+  albumCount: number; songCount: number;
+  duration: number; dateAdded: number;
+}
+```
+
+### Genre
+
+```typescript
+interface Genre {
+  id: string; name: string;
+  songCount: number; duration: number;
+}
+```
+
+### Playlist
+
+```typescript
+interface Playlist {
+  id: string; name: string;
+  songCount: number; duration: number;
+  dateAdded: number; dateModified: number;
+}
+```
+
+### Folder
+
+```typescript
+interface Folder {
+  id: string; name: string; path: string;
+  fileCount: number; totalSize: number;
+}
+```
+
+### SearchResult
+
+```typescript
+interface SearchResult {
+  audio: AudioItem[]; videos: VideoItem[];
+  images: ImageItem[]; documents: DocumentItem[];
+  totalCount: number; query: string;
+}
+```
+
+### LibraryResult
+
+```typescript
+interface LibraryResult {
+  audio: AudioItem[]; videos: VideoItem[];
+  images: ImageItem[]; documents: DocumentItem[];
+  totalCount: number;
+}
+```
+
+### MediaStoreStatistics
+
+```typescript
+interface MediaStoreStatistics {
+  totalAudio: number; totalVideo: number;
+  totalImages: number; totalDocuments: number;
+  totalSize: number; totalDuration: number;
+}
+```
+
+### DuplicateItem
+
+```typescript
+interface DuplicateItem {
+  fileHash: string; count: number;
+  items: AudioItem[]; totalSize: number;
+}
+```
+
 ### SortOptions
 
 ```typescript
@@ -751,47 +859,55 @@ interface MediaStoreError { code: ErrorCode; message: string; details?: string; 
 | RAR | `application/x-rar-compressed` |
 | 7Z | `application/x-7z-compressed` |
 
+Document queries are Android-only. iOS returns an empty array.
+
 ---
 
 ## FAQ
 
-**Q: Does it work in Expo Go?**  
+**Q: Does it work in Expo Go?**
 **A:** No. Requires native module support (Expo Dev Build or bare React Native).
 
-**Q: Does it work with Expo Dev Build?**  
+**Q: Does it work with Expo Dev Build?**
 **A:** Yes.
 
-**Q: Can I delete files?**  
+**Q: Does it work on iOS?**
+**A:** Yes. iOS 13.0+ is supported via the Photos Framework (`PHAsset`). Document queries return an empty array on iOS.
+
+**Q: Can I delete files?**
 **A:** No. This module is read-only. Use `expo-file-system` for mutations.
 
-**Q: Can I rename files?**  
+**Q: Can I rename files?**
 **A:** No. Renames belong in a filesystem module.
 
-**Q: Can I monitor changes?**  
-**A:** Yes. Use `useMediaChangeEvent` or the native `ContentObserver`.
+**Q: Can I monitor changes?**
+**A:** Yes. Use `useMediaChangeEvent` or the native observer (`ContentObserver` on Android, `PHPhotoLibraryChangeObserver` on iOS).
 
-**Q: Can I search?**  
+**Q: Can I search?**
 **A:** Yes. Full-text search via `search()` with multi-keyword, unicode support.
 
-**Q: Does it use MediaStore?**  
-**A:** Yes. All queries go through Android's `ContentResolver` → MediaStore database.
+**Q: Does it use MediaStore?**
+**A:** On Android, yes — all queries go through `ContentResolver` → MediaStore database. On iOS, it uses the Photos Framework (`PHAsset`).
 
-**Q: Does it support SD Cards?**  
-**A:** Yes, where indexed by the MediaStore database.
+**Q: Does it support SD Cards?**
+**A:** Yes, where indexed by the MediaStore database (Android).
 
-**Q: What Android versions are supported?**  
+**Q: What Android versions are supported?**
 **A:** Android 5.0+ (API 21+). Minimum SDK is 21.
 
-**Q: Does it require MANAGE_EXTERNAL_STORAGE?**  
-**A:** No. Uses standard MediaStore access pattern.
+**Q: What iOS versions are supported?**
+**A:** iOS 13.0+. Uses Photos Framework with `PHPhotoLibrary` authorization.
 
-**Q: Can I get album artwork?**  
+**Q: Does it require MANAGE_EXTERNAL_STORAGE?**
+**A:** No. Uses standard MediaStore access pattern (Android) and Photos Framework (iOS).
+
+**Q: Can I get album artwork?**
 **A:** Yes. Use `getAlbumArtwork(albumId)`.
 
-**Q: Can I get video thumbnails?**  
+**Q: Can I get video thumbnails?**
 **A:** Yes. Use `getVideoThumbnail(videoId)`.
 
-**Q: Is it typed?**  
+**Q: Is it typed?**
 **A:** Yes. 100% TypeScript with no `any`.
 
 ---
@@ -813,19 +929,27 @@ react-native-mediastore/
  │       ├── utils/
  │       └── extensions/
  ├── ios/
- │   └── Sources/ExpoMediastore/
- │       └── MediaStoreModule.swift
+ │   ├── ExpoMediaStore.podspec
+ │   ├── MediaStoreModule.swift
+ │   ├── MediaStoreRepository.swift
+ │   ├── MediaStoreObserver.swift
+ │   └── MediaStorePermissions.swift
  ├── src/
  │   ├── index.ts
  │   ├── MediaStoreModule.ts
  │   └── MediaStoreModule.types.ts
  ├── build/
+ ├── __tests__/
+ │   └── types.test.ts
  ├── example/
  │   ├── app/ (Music, Gallery, Documents, Search tabs)
  │   └── package.json
- ├── docs/
- ├── benchmarks/
- └── scripts/
+ ├── .github/workflows/
+ │   ├── ci.yml
+ │   └── release.yml
+ ├── expo-module.config.json
+ ├── package.json
+ └── tsconfig.json
 ```
 
 ---
@@ -833,23 +957,26 @@ react-native-mediastore/
 ## Roadmap
 
 ```
-1.0 (Current)
-  ✓ Audio, Video, Images, Documents queries
-  ✓ Albums, Artists, Genres, Playlists, Folders
-  ✓ Full-text search, Pagination, Permissions
-  ✓ ContentObserver, LRU cache, Error handling
-  ✓ Duplicate detection, Statistics, Favorites
+2.0 (Current)
+  ✓ iOS support (Photos Framework: PHAsset, PHImageManager, PHPhotoLibraryChangeObserver)
+  ✓ Thumbnail generation (video + image) with configurable dimensions
+  ✓ Album artwork extraction via ContentResolver / PHImageManager
+  ✓ Batch library query (getLibrary)
+  ✓ Reactive subscriptions (useMediaChangeEvent hook)
+  ✓ Duplicate detection via size + MD5 hash
+  ✓ Document statistics in getStatistics
+  ✓ Cache auto-invalidation on media change events
+  ✓ Pagination actually applied (limit/offset/cursor)
+  ✓ SQL injection prevention (escapeSql)
+  ✓ ExifInterface for camera make/model metadata
 
-1.1
-  ☐ Thumbnails (video + image)
-  ☐ Album artwork extraction
+2.1
   ☐ Folder statistics (size histograms)
   ☐ Incremental indexing (delta-only refresh)
-  ☐ Batch library query (getLibrary)
-  ☐ Reactive subscriptions
   ☐ Plugin hooks for custom metadata
+  ☐ Batch library query improvements
 
-1.2
+3.0
   ☐ AI semantic search
   ☐ Smart albums / auto-playlists
   ☐ EXIF utilities (editing GPS, date)
@@ -857,8 +984,7 @@ react-native-mediastore/
   ☐ Face clustering (images)
   ☐ OCR indexing (documents)
 
-2.0
-  ☐ iOS (Photos, Music, Files)
+4.0
   ☐ Desktop (Electron / Tauri)
   ☐ Cloud sync abstraction
   ☐ Cross-platform unified API
