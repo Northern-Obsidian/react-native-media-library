@@ -216,12 +216,35 @@ export type ErrorCode =
   | "PERMISSION_DENIED"
   | "QUERY_FAILED"
   | "INVALID_ARGUMENTS"
+  | "INVALID_SORT_FIELD"
+  | "INVALID_MIME_TYPE"
   | "UNSUPPORTED_ANDROID_VERSION"
   | "FILE_UNAVAILABLE"
+  | "CURSOR_CLOSED"
+  | "CACHE_FAILURE"
   | "UNKNOWN_ERROR";
 
 export interface MediaStoreError {
   code: ErrorCode;
   message: string;
   details?: string;
+}
+
+export interface LibraryResult {
+  audio: AudioItem[];
+  videos: VideoItem[];
+  images: ImageItem[];
+  documents: DocumentItem[];
+  totalCount: number;
+}
+
+export interface ArtworkResult {
+  uri: string | null;
+  mimeType: string | null;
+}
+
+export interface ThumbnailOptions {
+  width?: number;
+  height?: number;
+  kind?: "MINI_KIND" | "FULL_SCREEN_KIND" | "MICRO_KIND";
 }

@@ -19,6 +19,9 @@ import type {
   MediaChangeEvent,
   PermissionStatus,
   MediaStoreError,
+  LibraryResult,
+  ArtworkResult,
+  ThumbnailOptions,
 } from "./MediaStoreModule.types";
 import { useEvent } from "expo";
 
@@ -42,6 +45,9 @@ export type {
   MediaChangeEvent,
   PermissionStatus,
   MediaStoreError,
+  LibraryResult,
+  ArtworkResult,
+  ThumbnailOptions,
 };
 
 export { SortOrder, SortField } from "./MediaStoreModule.types";
@@ -180,4 +186,46 @@ export function useMediaChangeEvent(
   onMediaChange?: (event: MediaChangeEvent) => void
 ): MediaChangeEvent | null {
   return useEvent(NativeModule, "onMediaChange", onMediaChange);
+}
+
+export async function getLibrary(
+  sort?: SortOptions,
+  filter?: FilterOptions,
+  pagination?: PaginationOptions
+): Promise<LibraryResult> {
+  return NativeModule.getLibrary(
+    sort ?? null,
+    filter ?? null,
+    pagination ?? null
+  );
+}
+
+export async function getAlbumArtwork(
+  albumId: string
+): Promise<string | null> {
+  return NativeModule.getAlbumArtwork(albumId);
+}
+
+export async function getVideoThumbnail(
+  videoId: string,
+  width?: number,
+  height?: number
+): Promise<string | null> {
+  return NativeModule.getVideoThumbnail(
+    videoId,
+    width ?? null,
+    height ?? null
+  );
+}
+
+export async function getImageThumbnail(
+  imageId: string,
+  width?: number,
+  height?: number
+): Promise<string | null> {
+  return NativeModule.getImageThumbnail(
+    imageId,
+    width ?? null,
+    height ?? null
+  );
 }

@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "MediaStore Example",
+    "slug": "mediastore-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "mediastore-example",
+    "platforms": ["android"],
+    "plugins": ["@cadmus11/mediastore"]
+  }
+}
