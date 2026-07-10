@@ -13,6 +13,8 @@ android {
   defaultConfig {
     minSdk = 21
     targetSdk = 34
+    versionCode = 2
+    versionName = "2.0.0"
   }
 
   compileOptions {
@@ -22,6 +24,10 @@ android {
 
   kotlinOptions {
     jvmTarget = "17"
+  }
+
+  publishing {
+    singleVariant("release")
   }
 }
 
