@@ -7,7 +7,7 @@
     "android": "expo start --android"
   },
   "dependencies": {
-    "@cadmus11/react-native-mediastore": "..",
+    "@cadmuslabs/react-native-mediastore": "..",
     "expo": "~52.0.0",
     "expo-router": "~4.0.0",
     "expo-status-bar": "~2.0.0",

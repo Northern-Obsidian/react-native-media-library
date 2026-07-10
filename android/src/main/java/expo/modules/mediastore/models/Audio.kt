@@ -18,7 +18,17 @@ class AudioRecord : Record {
   @Field var year: Int = 0
   @Field var dateAdded: Long = 0L
   @Field var dateModified: Long = 0L
+  @Field var composer: String? = null
+  @Field var lyrics: String? = null
+  @Field var albumArtist: String? = null
+  @Field var isFavorite: Boolean = false
+  @Field var playCount: Int = 0
+  @Field var lastPlayed: Long = 0L
+  @Field var bookmark: Long = 0L
   @Field var bitrate: Int? = null
+  @Field var sampleRate: Int? = null
+  @Field var channels: Int? = null
+  @Field var encoding: String? = null
   @Field var mimeType: String = ""
   @Field var fileExtension: String = ""
   @Field var relativePath: String = ""

@@ -35,7 +35,17 @@ class MediaStoreMapper {
       year = CursorUtils.getInt(cursor, MediaStore.Audio.Media.YEAR)
       dateAdded = CursorUtils.getLong(cursor, MediaStore.Audio.Media.DATE_ADDED) * 1000L
       dateModified = CursorUtils.getLong(cursor, MediaStore.Audio.Media.DATE_MODIFIED) * 1000L
+      composer = CursorUtils.getStringOrNull(cursor, MediaStore.Audio.Media.COMPOSER)
+      lyrics = null
+      albumArtist = CursorUtils.getStringOrNull(cursor, MediaStore.Audio.Media.ALBUM_ARTIST)
+      isFavorite = false
+      playCount = 0
+      lastPlayed = 0L
+      bookmark = CursorUtils.getLong(cursor, MediaStore.Audio.Media.BOOKMARK)
       bitrate = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.BITRATE)
+      sampleRate = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.SAMPLE_RATE)
+      channels = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.CHANNEL_COUNT)
+      encoding = null
       mimeType = CursorUtils.getString(cursor, MediaStore.Audio.Media.MIME_TYPE)
       fileExtension = data.substringAfterLast('.', "")
       relativePath = CursorUtils.getString(cursor, MediaStore.Audio.Media.RELATIVE_PATH)

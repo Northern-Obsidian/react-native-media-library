@@ -13,7 +13,17 @@ export interface AudioItem {
   year: number;
   dateAdded: number;
   dateModified: number;
+  composer: string | null;
+  lyrics: string | null;
+  albumArtist: string | null;
+  isFavorite: boolean;
+  playCount: number;
+  lastPlayed: number;
+  bookmark: number;
   bitrate: number | null;
+  sampleRate: number | null;
+  channels: number | null;
+  encoding: string | null;
   mimeType: string;
   fileExtension: string;
   relativePath: string;

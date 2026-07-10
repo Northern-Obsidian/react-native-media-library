@@ -1,5 +1,5 @@
 {
-  "name": "@cadmus11/react-native-mediastore",
+  "name": "@cadmuslabs/react-native-mediastore",
   "version": "1.0.0",
   "description": "Universal high-performance media indexing library for Android using MediaStore",
   "main": "build/index.js",

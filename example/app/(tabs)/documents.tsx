@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FlatList, Text, View, StyleSheet } from "react-native";
-import { getDocuments, getFolders, DocumentItem, Folder } from "@cadmus11/react-native-mediastore";
+import { getDocuments, getFolders, DocumentItem, Folder } from "@cadmuslabs/react-native-mediastore";
 
 export default function DocumentsScreen() {
   const [files, setFiles] = useState<DocumentItem[]>([]);

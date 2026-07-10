@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { requestPermissions } from "@cadmus11/react-native-mediastore";
+import { requestPermissions } from "@cadmuslabs/react-native-mediastore";
 import { Text, View } from "react-native";
 
 export default function RootLayout() {

@@ -6,6 +6,6 @@
     "orientation": "portrait",
     "scheme": "react-native-mediastore-example",
     "platforms": ["android"],
-    "plugins": ["@cadmus11/react-native-mediastore"]
+    "plugins": ["@cadmuslabs/react-native-mediastore"]
   }
 }
