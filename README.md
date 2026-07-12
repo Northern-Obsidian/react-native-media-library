@@ -190,6 +190,13 @@ npx expo install @obsidian_north/react-native-mediastore
 
 Call `requestPermissions()` before querying media on first launch.
 
+### Compatibility Matrix
+
+| Expo SDK | React Native | AGP | Kotlin | Gradle | Status |
+|----------|-------------|-----|--------|--------|--------|
+| 52 | 0.76 | 8.7 | 2.0.21 | 8.11 | ✅ |
+| 56 | 0.85 | 9.0 | 2.1.20 | 9.3 | ✅ |
+
 ---
 
 ## Comparison

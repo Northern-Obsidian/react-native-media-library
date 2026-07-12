@@ -1,5 +1,3 @@
-@file:Suppress("UnstableApiUsage")
-
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
@@ -7,7 +5,7 @@ plugins {
 }
 
 group = "com.obsidian_north"
-version = "2.0.1"
+version = "2.1.0"
 
 android {
     namespace = "expo.modules.mediastore"
