@@ -1,6 +1,6 @@
 {
   "name": "@obsidian_north/react-native-mediastore",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Universal high-performance media indexing library for Android (MediaStore) and iOS (Photos Framework)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
