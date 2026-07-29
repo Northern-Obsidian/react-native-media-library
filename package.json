@@ -24,10 +24,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Cadmus11/-cadmus11-expo-mediastore"
+    "url": "https://github.com/Northern-Obsidian/react-native-media-library.git"
   },
   "bugs": {
-    "url": "https://github.com/Cadmus11/-cadmus11-expo-mediastore/issues"
+    "url": "https://github.com/Northern-Obsidian/react-native-media-library/issues"
   },
   "author": "cadmus_labs",
   "scripts": {

@@ -1038,12 +1038,26 @@ interface LibraryPerTypeStatistics {
 | XLSX | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
 | PPT | `application/vnd.ms-powerpoint` |
 | PPTX | `application/vnd.openxmlformats-officedocument.presentationml.presentation` |
+| ODT | `application/vnd.oasis.opendocument.text` |
+| ODS | `application/vnd.oasis.opendocument.spreadsheet` |
+| ODP | `application/vnd.oasis.opendocument.presentation` |
+| ODG | `application/vnd.oasis.opendocument.graphics` |
+| PAGES | `application/x-iwork-pages-sffpages` |
+| NUMBERS | `application/x-iwork-numbers-sffnumbers` |
+| KEY | `application/x-iwork-keynote-sffkey` |
 | TXT | `text/plain` |
+| MD | `text/markdown` |
+| HTML | `text/html` |
 | EPUB | `application/epub+zip` |
 | RTF | `application/rtf` |
 | CSV | `text/csv` |
 | JSON | `application/json` |
 | XML | `application/xml`, `text/xml` |
+| TAR | `application/x-tar` |
+| GZ | `application/gzip` |
+| BZ2 | `application/x-bzip2` |
+| XZ | `application/x-xz` |
+| ZST | `application/zstd` |
 | ZIP | `application/zip` |
 | RAR | `application/x-rar-compressed` |
 | 7Z | `application/x-7z-compressed` |
