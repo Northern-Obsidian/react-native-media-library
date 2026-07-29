@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.obsidian_north"
-version = "2.1.2"
+version = "2.1.4"
 
 android {
     namespace = "expo.modules.mediastore"
