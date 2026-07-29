@@ -10,3 +10,4 @@ coverage
 .git
 *.log
 *.iml
+ios

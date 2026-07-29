@@ -1,6 +1,6 @@
 {
   "name": "@obsidian_north/react-native-mediastore",
-  "version": "2.1.4",
+  "version": "3.0.0",
   "description": "Universal high-performance media indexing library for Android (MediaStore) and iOS (Photos Framework)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -8,7 +8,7 @@
   "sideEffects": false,
   "license": "MIT",
   "keywords": [
-    "expo",
+    "react-native",
     "mediastore",
     "android",
     "ios",
@@ -18,9 +18,7 @@
     "video",
     "images",
     "documents",
-    "expo-module",
-    "photos",
-    "mediastore"
+    "photos"
   ],
   "repository": {
     "type": "git",
@@ -44,18 +42,26 @@
     "src",
     "android",
     "ios",
-    "expo-module.config.json",
+    "react-native.config.js",
     "!**/*.tsbuildinfo"
   ],
+  "codegenConfig": {
+    "name": "RNMediaStoreSpecs",
+    "type": "modules",
+    "jsSrcsDir": "src"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.0",
-    "expo": "~52.0.0",
+    "@types/react": "~18.3.0",
     "jest": "^29.7.0",
+    "react": "18.3.1",
+    "react-native": "0.76.0",
     "rimraf": "^6.0.0",
     "ts-jest": "^29.2.0",
     "typescript": "^5.3.0"
   },
   "peerDependencies": {
-    "expo": ">=52.0.0"
+    "react": "*",
+    "react-native": ">=0.76.0"
   }
 }

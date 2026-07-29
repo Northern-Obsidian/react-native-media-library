@@ -1,152 +1,259 @@
-import ExpoModulesCore
+import Foundation
+import Photos
 
-public class MediaStoreModule: Module {
-  public func definition() -> ModuleDefinition {
-    Name("MediaStore")
+@objc(MediaStore)
+class MediaStoreModule: RCTEventEmitter {
+  private var hasListeners = false
 
-    Events("onMediaChange")
+  override func supportedEvents() -> [String] {
+    return ["onMediaChange"]
+  }
 
-    AsyncFunction("getAudio") { (sort: Any?, filter: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getAudio(sort: sort, filter: filter, pagination: pagination)
+  override func startObserving() {
+    hasListeners = true
+    let observer = MediaStoreObserver.shared
+    observer.startListening { [weak self] event in
+      self?.sendEvent(withName: "onMediaChange", body: event)
     }
+  }
 
-    AsyncFunction("getVideos") { (sort: Any?, filter: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getVideos(sort: sort, filter: filter, pagination: pagination)
-    }
+  override func stopObserving() {
+    hasListeners = false
+    MediaStoreObserver.shared.stopListening()
+  }
 
-    AsyncFunction("getImages") { (sort: Any?, filter: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getImages(sort: sort, filter: filter, pagination: pagination)
-    }
+  // MARK: - Audio
 
-    AsyncFunction("getDocuments") { (sort: Any?, filter: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getDocuments(sort: sort, filter: filter, pagination: pagination)
-    }
+  @objc
+  func getAudio(_ sort: NSDictionary?, filter: NSDictionary?, pagination: NSDictionary?,
+                resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getAudio(sort: sort, filter: filter, pagination: pagination))
+  }
 
-    AsyncFunction("getAlbums") { (sort: Any?, filter: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getAlbums(sort: sort, filter: filter, pagination: pagination)
-    }
+  // MARK: - Videos
 
-    AsyncFunction("getArtists") { (sort: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getArtists(sort: sort, pagination: pagination)
-    }
+  @objc
+  func getVideos(_ sort: NSDictionary?, filter: NSDictionary?, pagination: NSDictionary?,
+                resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getVideos(sort: sort, filter: filter, pagination: pagination))
+  }
 
-    AsyncFunction("getGenres") { (sort: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getGenres(sort: sort, pagination: pagination)
-    }
+  // MARK: - Images
 
-    AsyncFunction("getPlaylists") { (sort: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getPlaylists(sort: sort, pagination: pagination)
-    }
+  @objc
+  func getImages(_ sort: NSDictionary?, filter: NSDictionary?, pagination: NSDictionary?,
+                resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getImages(sort: sort, filter: filter, pagination: pagination))
+  }
 
-    AsyncFunction("getFolders") { (sort: Any?, filter: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getFolders(sort: sort, filter: filter, pagination: pagination)
-    }
+  // MARK: - Documents
 
-    AsyncFunction("getFolderStatistics") { (folderPath: String?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getFolderStatistics(folderPath: folderPath)
-    }
+  @objc
+  func getDocuments(_ sort: NSDictionary?, filter: NSDictionary?, pagination: NSDictionary?,
+                   resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getDocuments(sort: sort, filter: filter, pagination: pagination))
+  }
 
-    AsyncFunction("refreshIncremental") { (lastTimestamp: Double?) -> [String: Any?] in
-      let repository = MediaStoreRepository()
-      return repository.refreshIncremental(lastTimestamp: lastTimestamp)
-    }
+  // MARK: - Albums
 
-    AsyncFunction("getLastRefreshTimestamp") { () -> Double in
-      return MediaStoreRepository.lastRefreshTimestamp
-    }
+  @objc
+  func getAlbums(_ sort: NSDictionary?, filter: NSDictionary?, pagination: NSDictionary?,
+                resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getAlbums(sort: sort, filter: filter, pagination: pagination))
+  }
 
-    AsyncFunction("search") { (options: [String: Any?]) -> [String: Any?] in
-      let repository = MediaStoreRepository()
-      return repository.search(options: options)
-    }
+  // MARK: - Artists
 
-    AsyncFunction("getById") { (mediaType: String, id: String) -> [String: Any?]? in
-      let repository = MediaStoreRepository()
-      return repository.getById(mediaType: mediaType, id: id)
-    }
+  @objc
+  func getArtists(_ sort: NSDictionary?, pagination: NSDictionary?,
+                 resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getArtists(sort: sort, pagination: pagination))
+  }
 
-    AsyncFunction("getByUri") { (uri: String) -> [String: Any?]? in
-      let repository = MediaStoreRepository()
-      return repository.getByUri(uri: uri)
-    }
+  // MARK: - Genres
 
-    AsyncFunction("getRecent") { (mediaType: String?, limit: Int?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getRecent(mediaType: mediaType, limit: limit)
-    }
+  @objc
+  func getGenres(_ sort: NSDictionary?, pagination: NSDictionary?,
+                resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getGenres(sort: sort, pagination: pagination))
+  }
 
-    AsyncFunction("getFavorites") { (mediaType: String?, sort: Any?, pagination: Any?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getFavorites(mediaType: mediaType, sort: sort, pagination: pagination)
-    }
+  // MARK: - Playlists
 
-    AsyncFunction("getLargestFiles") { (mediaType: String?, limit: Int?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getLargestFiles(mediaType: mediaType, limit: limit)
-    }
+  @objc
+  func getPlaylists(_ sort: NSDictionary?, pagination: NSDictionary?,
+                   resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getPlaylists(sort: sort, pagination: pagination))
+  }
 
-    AsyncFunction("getDuplicates") { (mediaType: String?) -> [[String: Any?]] in
-      let repository = MediaStoreRepository()
-      return repository.getDuplicates(mediaType: mediaType)
-    }
+  // MARK: - Folders
 
-    AsyncFunction("getStatistics") { () -> [String: Any?] in
-      let repository = MediaStoreRepository()
-      return repository.getStatistics()
-    }
+  @objc
+  func getFolders(_ sort: NSDictionary?, filter: NSDictionary?, pagination: NSDictionary?,
+                 resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getFolders(sort: sort, filter: filter, pagination: pagination))
+  }
 
-    AsyncFunction("refresh") { () in
-      // iOS uses PHCachingImageManager which handles its own cache
-    }
+  // MARK: - Folder Statistics
 
-    AsyncFunction("checkPermissions") { () -> [String: Any?] in
+  @objc
+  func getFolderStatistics(_ folderPath: String?,
+                          resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getFolderStatistics(folderPath: folderPath))
+  }
+
+  // MARK: - Incremental Refresh
+
+  @objc
+  func refreshIncremental(_ lastTimestamp: Double?,
+                         resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.refreshIncremental(lastTimestamp: lastTimestamp))
+  }
+
+  // MARK: - Last Refresh Timestamp
+
+  @objc
+  func getLastRefreshTimestamp(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    resolve(MediaStoreRepository.lastRefreshTimestamp)
+  }
+
+  // MARK: - Search
+
+  @objc
+  func search(_ options: NSDictionary,
+             resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.search(options: options as! [String: Any?]))
+  }
+
+  // MARK: - Lookups
+
+  @objc
+  func getById(_ mediaType: String, id: String,
+              resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getById(mediaType: mediaType, id: id))
+  }
+
+  @objc
+  func getByUri(_ uri: String,
+               resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getByUri(uri: uri))
+  }
+
+  // MARK: - Recent
+
+  @objc
+  func getRecent(_ mediaType: String?, limit: Int?,
+                resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getRecent(mediaType: mediaType, limit: limit))
+  }
+
+  // MARK: - Favorites
+
+  @objc
+  func getFavorites(_ mediaType: String?, sort: NSDictionary?, pagination: NSDictionary?,
+                   resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getFavorites(mediaType: mediaType, sort: sort, pagination: pagination))
+  }
+
+  // MARK: - Largest Files
+
+  @objc
+  func getLargestFiles(_ mediaType: String?, limit: Int?,
+                      resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getLargestFiles(mediaType: mediaType, limit: limit))
+  }
+
+  // MARK: - Duplicates
+
+  @objc
+  func getDuplicates(_ mediaType: String?,
+                    resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getDuplicates(mediaType: mediaType))
+  }
+
+  // MARK: - Statistics
+
+  @objc
+  func getStatistics(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getStatistics())
+  }
+
+  // MARK: - Refresh
+
+  @objc
+  func refresh(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    resolve(nil)
+  }
+
+  // MARK: - Permissions
+
+  @objc
+  func checkPermissions(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let permissions = MediaStorePermissions()
+    resolve(permissions.checkStatus())
+  }
+
+  @objc
+  func requestPermissions(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    Task {
       let permissions = MediaStorePermissions()
-      return permissions.checkStatus()
+      let result = await permissions.request()
+      resolve(result)
     }
+  }
 
-    AsyncFunction("requestPermissions") { () -> [String: Any?] in
-      let permissions = MediaStorePermissions()
-      return try await permissions.request()
-    }
+  // MARK: - Artwork
 
-    AsyncFunction("getAlbumArtwork") { (albumId: String) -> String? in
-      let repository = MediaStoreRepository()
-      return repository.getAlbumArtwork(albumId: albumId)
-    }
+  @objc
+  func getAlbumArtwork(_ albumId: String?,
+                      resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getAlbumArtwork(albumId: albumId ?? ""))
+  }
 
-    AsyncFunction("getVideoThumbnail") { (videoId: String, width: Int?, height: Int?) -> String? in
-      let repository = MediaStoreRepository()
-      return repository.getThumbnail(assetId: videoId, mediaType: .video, width: width, height: height)
-    }
+  // MARK: - Thumbnails
 
-    AsyncFunction("getImageThumbnail") { (imageId: String, width: Int?, height: Int?) -> String? in
-      let repository = MediaStoreRepository()
-      return repository.getThumbnail(assetId: imageId, mediaType: .photo, width: width, height: height)
-    }
+  @objc
+  func getVideoThumbnail(_ videoId: String, width: Int?, height: Int?,
+                        resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getThumbnail(assetId: videoId, mediaType: .video, width: width, height: height))
+  }
 
-    OnStartObserving {
-      let observer = MediaStoreObserver.shared
-      observer.startListening { event in
-        self.sendEvent("onMediaChange", [
-          "type": event["type"] ?? "",
-          "mediaType": event["mediaType"] ?? "",
-          "itemId": event["itemId"] ?? "",
-          "uri": event["uri"] ?? ""
-        ])
-      }
-    }
+  @objc
+  func getImageThumbnail(_ imageId: String, width: Int?, height: Int?,
+                        resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getThumbnail(assetId: imageId, mediaType: .photo, width: width, height: height))
+  }
 
-    OnStopObserving {
+  // MARK: - Lifecycle
+
+  override static func requiresMainQueueSetup() -> Bool {
+    return false
+  }
+
+  deinit {
+    if hasListeners {
       MediaStoreObserver.shared.stopListening()
     }
   }

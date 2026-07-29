@@ -1,3 +1,5 @@
+import React from "react";
+import { NativeEventEmitter } from "react-native";
 import NativeModule from "./MediaStoreModule";
 import type {
   AudioItem,
@@ -29,7 +31,6 @@ import type {
   LibraryQueryOptions,
   LibraryQueryResult,
 } from "./MediaStoreModule.types";
-import { useEvent } from "expo";
 
 export type {
   AudioItem,
@@ -65,6 +66,8 @@ export type {
 export { SortOrder, SortField } from "./MediaStoreModule.types";
 
 const registeredPlugins: Map<string, MetadataPlugin> = new Map();
+
+const eventEmitter = new NativeEventEmitter(NativeModule);
 
 export async function getAudio(
   sort?: SortOptions,
@@ -123,28 +126,28 @@ export async function getAlbums(
   filter?: FilterOptions,
   pagination?: PaginationOptions
 ): Promise<Album[]> {
-  return NativeModule.getAlbums(sort ?? null, filter ?? null, pagination ?? null);
+  return NativeModule.getAlbums(sort ?? null, filter ?? null, pagination ?? null) as Promise<Album[]>;
 }
 
 export async function getArtists(
   sort?: SortOptions,
   pagination?: PaginationOptions
 ): Promise<Artist[]> {
-  return NativeModule.getArtists(sort ?? null, pagination ?? null);
+  return NativeModule.getArtists(sort ?? null, pagination ?? null) as Promise<Artist[]>;
 }
 
 export async function getGenres(
   sort?: SortOptions,
   pagination?: PaginationOptions
 ): Promise<Genre[]> {
-  return NativeModule.getGenres(sort ?? null, pagination ?? null);
+  return NativeModule.getGenres(sort ?? null, pagination ?? null) as Promise<Genre[]>;
 }
 
 export async function getPlaylists(
   sort?: SortOptions,
   pagination?: PaginationOptions
 ): Promise<Playlist[]> {
-  return NativeModule.getPlaylists(sort ?? null, pagination ?? null);
+  return NativeModule.getPlaylists(sort ?? null, pagination ?? null) as Promise<Playlist[]>;
 }
 
 export async function getFolders(
@@ -152,19 +155,20 @@ export async function getFolders(
   filter?: FilterOptions,
   pagination?: PaginationOptions
 ): Promise<Folder[]> {
-  return NativeModule.getFolders(sort ?? null, filter ?? null, pagination ?? null);
+  return NativeModule.getFolders(sort ?? null, filter ?? null, pagination ?? null) as Promise<Folder[]>;
 }
 
 export async function search(
   options: SearchOptions
 ): Promise<SearchResult> {
-  const result = await NativeModule.search(options);
+  const result = await NativeModule.search(options) as Record<string, any>;
   return {
-    ...result,
-    audio: applyPlugins(result.audio) as AudioItem[],
-    videos: applyPlugins(result.videos) as VideoItem[],
-    images: applyPlugins(result.images) as ImageItem[],
-    documents: applyPlugins(result.documents) as DocumentItem[],
+    audio: applyPlugins(result.audio ?? []) as AudioItem[],
+    videos: applyPlugins(result.videos ?? []) as VideoItem[],
+    images: applyPlugins(result.images ?? []) as ImageItem[],
+    documents: applyPlugins(result.documents ?? []) as DocumentItem[],
+    totalCount: result.totalCount ?? 0,
+    query: result.query ?? "",
   };
 }
 
@@ -213,11 +217,11 @@ export async function getLargestFiles(
 export async function getDuplicates(
   mediaType?: "audio" | "video" | "image" | "document"
 ): Promise<DuplicateItem[]> {
-  return NativeModule.getDuplicates(mediaType ?? null);
+  return NativeModule.getDuplicates(mediaType ?? null) as Promise<DuplicateItem[]>;
 }
 
 export async function getStatistics(): Promise<MediaStoreStatistics> {
-  return NativeModule.getStatistics();
+  return NativeModule.getStatistics() as Promise<MediaStoreStatistics>;
 }
 
 export async function refresh(): Promise<void> {
@@ -225,17 +229,29 @@ export async function refresh(): Promise<void> {
 }
 
 export async function checkPermissions(): Promise<PermissionStatus> {
-  return NativeModule.checkPermissions();
+  return NativeModule.checkPermissions() as Promise<PermissionStatus>;
 }
 
 export async function requestPermissions(): Promise<PermissionStatus> {
-  return NativeModule.requestPermissions();
+  return NativeModule.requestPermissions() as Promise<PermissionStatus>;
 }
 
 export function useMediaChangeEvent(
   onMediaChange?: (event: MediaChangeEvent) => void
 ): MediaChangeEvent | null {
-  return useEvent(NativeModule, "onMediaChange", onMediaChange);
+  const [event, setEvent] = React.useState<MediaChangeEvent | null>(null);
+
+  React.useEffect(() => {
+    const subscription = eventEmitter.addListener("onMediaChange", (e: MediaChangeEvent) => {
+      setEvent(e);
+      if (onMediaChange) {
+        onMediaChange(e);
+      }
+    });
+    return () => subscription.remove();
+  }, [onMediaChange]);
+
+  return event;
 }
 
 export async function getLibrary(
@@ -247,7 +263,7 @@ export async function getLibrary(
     sort ?? null,
     filter ?? null,
     pagination ?? null
-  );
+  ) as Promise<LibraryResult>;
 }
 
 export async function getLibraryQuery(
@@ -264,28 +280,28 @@ export async function getLibraryQuery(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.audio ?? opts.pagination ?? null
-        ).then((r: AudioItem[]) => applyPlugins(r) as AudioItem[])
+        ).then((r) => applyPlugins(r) as AudioItem[])
       : Promise.resolve([] as AudioItem[]),
     types.includes("video")
       ? NativeModule.getVideos(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.video ?? opts.pagination ?? null
-        ).then((r: VideoItem[]) => applyPlugins(r) as VideoItem[])
+        ).then((r) => applyPlugins(r) as VideoItem[])
       : Promise.resolve([] as VideoItem[]),
     types.includes("image")
       ? NativeModule.getImages(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.image ?? opts.pagination ?? null
-        ).then((r: ImageItem[]) => applyPlugins(r) as ImageItem[])
+        ).then((r) => applyPlugins(r) as ImageItem[])
       : Promise.resolve([] as ImageItem[]),
     types.includes("document")
       ? NativeModule.getDocuments(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.document ?? opts.pagination ?? null
-        ).then((r: DocumentItem[]) => applyPlugins(r) as DocumentItem[])
+        ).then((r) => applyPlugins(r) as DocumentItem[])
       : Promise.resolve([] as DocumentItem[]),
   ]);
 
@@ -366,13 +382,13 @@ export async function getImageThumbnail(
 export async function getFolderStatistics(
   folderPath?: string
 ): Promise<FolderStatistics[]> {
-  return NativeModule.getFolderStatistics(folderPath ?? null);
+  return NativeModule.getFolderStatistics(folderPath ?? null) as Promise<FolderStatistics[]>;
 }
 
 export async function refreshIncremental(
   lastTimestamp?: number
 ): Promise<IncrementalChanges> {
-  return NativeModule.refreshIncremental(lastTimestamp ?? null);
+  return NativeModule.refreshIncremental(lastTimestamp ?? null) as Promise<IncrementalChanges>;
 }
 
 export async function getLastRefreshTimestamp(): Promise<number> {
@@ -395,28 +411,28 @@ export function getRegisteredPlugins(): MetadataPlugin[] {
 }
 
 function applyPlugins(
-  items: (AudioItem | VideoItem | ImageItem | DocumentItem)[]
+  items: Record<string, any>[]
 ): (AudioItem | VideoItem | ImageItem | DocumentItem)[] {
-  if (registeredPlugins.size === 0) return items;
+  if (registeredPlugins.size === 0) return items as (AudioItem | VideoItem | ImageItem | DocumentItem)[];
 
   return items.map((item) => {
-    const merged = { ...(item as unknown as Record<string, unknown>) };
+    const merged = { ...item };
     const custom: Record<string, unknown> = {};
 
     for (const plugin of registeredPlugins.values()) {
       try {
-        const result = plugin.extract(item);
+        const result = plugin.extract(item as AudioItem | VideoItem | ImageItem | DocumentItem);
         if (result && typeof result === "object") {
           Object.assign(custom, result);
         }
       } catch (_e) {
-        // Plugin errors are silently ignored to not break queries
+        // Plugin errors are silently ignored
       }
     }
 
     if (Object.keys(custom).length > 0) {
       merged.customMetadata = {
-        ...((merged.customMetadata as Record<string, unknown>) ?? {}),
+        ...(merged.customMetadata ?? {}),
         ...custom,
       };
     }

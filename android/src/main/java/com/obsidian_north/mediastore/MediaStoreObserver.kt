@@ -1,4 +1,4 @@
-package expo.modules.mediastore
+package com.obsidian_north.mediastore
 
 import android.content.Context
 import android.database.ContentObserver
@@ -8,10 +8,7 @@ import android.os.Looper
 import android.provider.MediaStore
 
 data class MediaChangeEvent(
-  val type: String,
-  val mediaType: String,
-  val itemId: String,
-  val uri: String
+  val type: String, val mediaType: String, val itemId: String, val uri: String
 )
 
 class MediaStoreObserver(private val context: Context) {
@@ -28,26 +25,22 @@ class MediaStoreObserver(private val context: Context) {
       override fun onChange(selfChange: Boolean, uri: Uri?) {
         if (uri != null) {
           val event = parseUri(uri)
-          if (event != null) {
-            listener?.invoke(event)
-          }
+          if (event != null) listener?.invoke(event)
         }
       }
     }
 
-    val contentResolver = context.contentResolver
-    contentResolver.registerContentObserver(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, true, observer!!)
-    contentResolver.registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, observer!!)
-    contentResolver.registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, observer!!)
-    contentResolver.registerContentObserver(MediaStore.Files.getContentUri("external"), true, observer!!)
+    val cr = context.contentResolver
+    cr.registerContentObserver(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, true, observer!!)
+    cr.registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, observer!!)
+    cr.registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, observer!!)
+    cr.registerContentObserver(MediaStore.Files.getContentUri("external"), true, observer!!)
   }
 
   fun stopListening() {
     if (!isListening) return
     observer?.let { context.contentResolver.unregisterContentObserver(it) }
-    observer = null
-    listener = null
-    isListening = false
+    observer = null; listener = null; isListening = false
   }
 
   private fun parseUri(uri: Uri): MediaChangeEvent? {
@@ -59,16 +52,13 @@ class MediaStoreObserver(private val context: Context) {
       uriStr.contains(MediaStore.Files.getContentUri("external").toString()) -> "document"
       else -> return null
     }
-
     val type = when {
       uriStr.contains("/update/") -> "modified"
       uriStr.contains("/insert/") -> "added"
       uriStr.contains("/delete/") -> "removed"
       else -> "modified"
     }
-
     val itemId = uri.lastPathSegment ?: ""
-
     return MediaChangeEvent(type = type, mediaType = mediaType, itemId = itemId, uri = uriStr)
   }
 

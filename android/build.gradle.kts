@@ -1,14 +1,13 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("expo-module-gradle-plugin")
 }
 
 group = "com.obsidian_north"
-version = "2.1.4"
+version = "3.0.0"
 
 android {
-    namespace = "expo.modules.mediastore"
+    namespace = "com.obsidian_north.mediastore"
     compileSdk = 36
 
     defaultConfig {
@@ -29,7 +28,12 @@ kotlin {
     }
 }
 
+repositories {
+    mavenCentral()
+    google()
+}
+
 dependencies {
-    api(project(":expo-modules-core"))
+    implementation("com.facebook.react:react-android")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
 }

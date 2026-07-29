@@ -1,28 +1,28 @@
-package expo.modules.mediastore.utils
+package com.obsidian_north.mediastore.utils
 
 object MimeUtils {
-  private val audioMimeTypes = setOf(
+  val audioMimeTypes = setOf(
     "audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg", "audio/flac",
     "audio/aac", "audio/x-m4a", "audio/x-wav", "audio/x-flac",
     "audio/x-ms-wma", "audio/x-aiff", "audio/amr", "audio/webm",
     "audio/opus"
   )
 
-  private val videoMimeTypes = setOf(
+  val videoMimeTypes = setOf(
     "video/mp4", "video/x-matroska", "video/webm", "video/avi",
     "video/x-msvideo", "video/quicktime", "video/x-ms-wmv",
     "video/mpeg", "video/3gpp", "video/x-flv",
     "video/x-m4v", "video/mp2t"
   )
 
-  private val imageMimeTypes = setOf(
+  val imageMimeTypes = setOf(
     "image/jpeg", "image/png", "image/webp", "image/gif",
     "image/bmp", "image/x-ms-bmp", "image/x-icon",
     "image/heif", "image/heic", "image/avif",
     "image/tiff", "image/svg+xml"
   )
 
-  private val documentMimeTypes = mapOf(
+  val documentMimeTypes = mapOf(
     "application/pdf" to "pdf",
     "application/msword" to "doc",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document" to "docx",
@@ -56,7 +56,7 @@ object MimeUtils {
     "application/x-7z-compressed" to "7z"
   )
 
-  private val extensionToMime = mapOf(
+  val extensionToMime = mapOf(
     "mp3" to "audio/mpeg", "m4a" to "audio/x-m4a", "wav" to "audio/wav",
     "flac" to "audio/flac", "ogg" to "audio/ogg", "aac" to "audio/aac",
     "wma" to "audio/x-ms-wma", "aiff" to "audio/x-aiff", "opus" to "audio/opus",
@@ -88,43 +88,26 @@ object MimeUtils {
     "7z" to "application/x-7z-compressed"
   )
 
-  fun isAudio(mimeType: String): Boolean {
-    return audioMimeTypes.contains(mimeType)
+  fun isAudio(mimeType: String): Boolean = audioMimeTypes.contains(mimeType)
+  fun isVideo(mimeType: String): Boolean = videoMimeTypes.contains(mimeType)
+  fun isImage(mimeType: String): Boolean = imageMimeTypes.contains(mimeType)
+  fun isDocument(mimeType: String): Boolean = documentMimeTypes.containsKey(mimeType)
+
+  fun getExtensionFromMime(mimeType: String): String =
+    documentMimeTypes[mimeType] ?: mimeType.substringAfterLast("/", "")
+
+  fun getMimeFromExtension(extension: String): String =
+    extensionToMime[extension.lowercase()] ?: "application/octet-stream"
+
+  fun getMediaType(mimeType: String): String = when {
+    isAudio(mimeType) -> "audio"
+    isVideo(mimeType) -> "video"
+    isImage(mimeType) -> "image"
+    isDocument(mimeType) -> "document"
+    else -> "unknown"
   }
 
-  fun isVideo(mimeType: String): Boolean {
-    return videoMimeTypes.contains(mimeType)
-  }
-
-  fun isImage(mimeType: String): Boolean {
-    return imageMimeTypes.contains(mimeType)
-  }
-
-  fun isDocument(mimeType: String): Boolean {
-    return documentMimeTypes.containsKey(mimeType)
-  }
-
-  fun getExtensionFromMime(mimeType: String): String {
-    return documentMimeTypes[mimeType] ?: mimeType.substringAfterLast("/", "")
-  }
-
-  fun getMimeFromExtension(extension: String): String {
-    return extensionToMime[extension.lowercase()] ?: "application/octet-stream"
-  }
-
-  fun getMediaType(mimeType: String): String {
-    return when {
-      isAudio(mimeType) -> "audio"
-      isVideo(mimeType) -> "video"
-      isImage(mimeType) -> "image"
-      isDocument(mimeType) -> "document"
-      else -> "unknown"
-    }
-  }
-
-  fun getDocumentMimeTypes(): List<String> {
-    return documentMimeTypes.keys.toList()
-  }
+  fun getDocumentMimeTypes(): List<String> = documentMimeTypes.keys.toList()
 
   fun getDocumentMimeFilter(): String {
     val mimes = listOf(

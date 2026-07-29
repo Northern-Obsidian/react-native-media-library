@@ -1,5 +1,3 @@
-import { requireNativeModule } from "expo";
+import NativeMediaStore from "./NativeMediaStore";
 
-const NativeModule = requireNativeModule("MediaStore");
-
-export default NativeModule;
+export default NativeMediaStore;

@@ -2,7 +2,7 @@
 
 **Universal high-performance media indexing library for Android and iOS.**
 
-A reusable Expo Module that provides fast, production-grade access to media and indexed documents on Android (via MediaStore) and iOS (via Photos Framework) — no recursive filesystem scanning.
+A pure React Native TurboModule that provides fast, production-grade access to media and indexed documents on Android (via MediaStore) and iOS (via Photos Framework) — no recursive filesystem scanning.
 
 <div align="center">
 
@@ -21,7 +21,7 @@ App
 TypeScript SDK
  │
  ▼
-Expo Module (expo-module-core)
+React Native Native Module (TurboModule)
  │
  ├── Permission Manager
  ├── Cache Manager (LRU + TTL)
@@ -158,17 +158,13 @@ Measurements taken on a Pixel 7 (Android 14) with 50k audio, 2k video, 10k image
 npm install @obsidian_north/react-native-mediastore
 ```
 
-Or with a development build:
-
-```bash
-npx expo install @obsidian_north/react-native-mediastore
-```
+> Compatible with Expo development builds — install with `npx expo install @obsidian_north/react-native-mediastore` after running `npx expo prebuild`.
 
 ---
 
 ## Prerequisites
 
-- Expo SDK 52+ or React Native with New Architecture enabled
+- React Native 0.76+
 - **Android**: API 21+ (Android 5.0)
   - Android 13+ (API 33): granular media permissions are requested automatically
   - Android 12 and below: `READ_EXTERNAL_STORAGE` permission is required
@@ -192,10 +188,10 @@ Call `requestPermissions()` before querying media on first launch.
 
 ### Compatibility Matrix
 
-| Expo SDK | React Native | AGP | Kotlin | Gradle | Status |
-|----------|-------------|-----|--------|--------|--------|
-| 52 | 0.76 | 8.7 | 2.0.21 | 8.11 | ✅ |
-| 56 | 0.85 | 9.0 | 2.1.20 | 9.3 | ✅ |
+| React Native | AGP | Kotlin | Gradle | Status |
+|-------------|-----|--------|--------|--------|
+| 0.76 | 8.7 | 2.0.21 | 8.11 | ✅ |
+| 0.85 | 9.0 | 2.1.20 | 9.3 | ✅ |
 
 ---
 
@@ -379,11 +375,7 @@ The module uses Android's `ContentObserver` and iOS's `PHPhotoLibraryChangeObser
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `mediaAdded` | `{ type: "added", mediaType, itemId, uri }` | New media file indexed |
-| `mediaRemoved` | `{ type: "removed", mediaType, itemId, uri }` | Media file deleted |
-| `mediaModified` | `{ type: "modified", mediaType, itemId, uri }` | Metadata or file modified |
-| `permissionChanged` | `{ type: "permissionChanged", granted, mediaType }` | Permission state changed |
-| `cacheInvalidated` | `{ type: "cacheInvalidated" }` | Cache cleared automatically |
+| `onMediaChange` | `{ type: "added" \| "removed" \| "modified", mediaType, itemId, uri }` | Media file indexed, deleted, or modified |
 
 ### React Hook
 
@@ -1120,8 +1112,9 @@ Document queries are Android-only. iOS returns an empty array.
 ```
 react-native-mediastore/
  ├── android/
- │   └── src/main/java/expo/modules/mediastore/
+ │   └── src/main/java/com/obsidian_north/mediastore/
  │       ├── MediaStoreModule.kt
+ │       ├── MediaStorePackage.kt
  │       ├── MediaStoreRepository.kt
  │       ├── MediaStoreQueryBuilder.kt
  │       ├── MediaStoreMapper.kt
@@ -1132,7 +1125,7 @@ react-native-mediastore/
  │       ├── utils/
  │       └── extensions/
  ├── ios/
- │   ├── ExpoMediaStore.podspec
+ │   ├── RNMediaStore.podspec
  │   ├── MediaStoreModule.swift
  │   ├── MediaStoreRepository.swift
  │   ├── MediaStoreObserver.swift
@@ -1140,6 +1133,7 @@ react-native-mediastore/
  ├── src/
  │   ├── index.ts
  │   ├── MediaStoreModule.ts
+ │   ├── NativeMediaStore.ts
  │   └── MediaStoreModule.types.ts
  ├── build/
  ├── __tests__/
@@ -1150,7 +1144,7 @@ react-native-mediastore/
  ├── .github/workflows/
  │   ├── ci.yml
  │   └── release.yml
- ├── expo-module.config.json
+ ├── react-native.config.js
  ├── package.json
  └── tsconfig.json
 ```
@@ -1160,7 +1154,7 @@ react-native-mediastore/
 ## Roadmap
 
 ```
-2.0
+2.0 — Expo Module (legacy)
   ✓ iOS support (Photos Framework: PHAsset, PHImageManager, PHPhotoLibraryChangeObserver)
   ✓ Thumbnail generation (video + image) with configurable dimensions
   ✓ Album artwork extraction via ContentResolver / PHImageManager
@@ -1173,13 +1167,17 @@ react-native-mediastore/
   ✓ SQL injection prevention (escapeSql)
   ✓ ExifInterface for camera make/model metadata
 
-2.1 (Current)
+2.1 — Expo Module (legacy)
   ✓ Folder statistics (size histograms)
   ✓ Incremental indexing (delta-only refresh)
   ✓ Plugin hooks for custom metadata
   ✓ Batch library query improvements
 
-3.0
+3.0 (Current)
+  ✓ Migrated from Expo Module to pure React Native TurboModule
+  ✓ No dependency on expo-modules-core
+  ✓ Compatible with RN CLI, Expo prebuild, and EAS Build
+  ✓ Codegen-ready with NativeMediaStore spec
   ☐ AI semantic search
   ☐ Smart albums / auto-playlists
   ☐ EXIF utilities (editing GPS, date)

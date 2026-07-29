@@ -1,0 +1,452 @@
+package com.obsidian_north.mediastore
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Build
+import android.os.CancellationSignal
+import android.provider.MediaStore
+import com.facebook.react.bridge.*
+import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.obsidian_north.mediastore.models.*
+import kotlinx.coroutines.*
+import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
+
+class MediaStoreModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
+  private val moduleScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+  private val context: Context get() = reactApplicationContext
+
+  private val repository by lazy { MediaStoreRepository(context) }
+  private val mapper by lazy { MediaStoreMapper() }
+  private val queryBuilder by lazy { MediaStoreQueryBuilder() }
+  private val permissions by lazy { MediaStorePermissions(context, reactApplicationContext) }
+  private val observer by lazy { MediaStoreObserver(context) }
+  private val cache by lazy { MediaStoreCache() }
+  private var isObserving = false
+
+  override fun getName(): String = "MediaStore"
+
+  // --- ReadableMap parsing helpers ---
+
+  private fun parseSort(map: ReadableMap?): SortOptionsRecord? {
+    if (map == null) return null
+    return SortOptionsRecord().apply { field = map.getString("field") ?: "name"; order = map.getString("order") ?: "asc" }
+  }
+
+  private fun parseFilter(map: ReadableMap?): FilterOptionsRecord? {
+    if (map == null) return null
+    return FilterOptionsRecord().apply {
+      if (map.hasKey("mimeTypes")) { val a = map.getArray("mimeTypes"); mimeTypes = (0 until (a?.size() ?: 0)).map { a?.getString(it) ?: "" } }
+      if (map.hasKey("extensions")) { val a = map.getArray("extensions"); extensions = (0 until (a?.size() ?: 0)).map { a?.getString(it) ?: "" } }
+      if (map.hasKey("folder")) folder = map.getString("folder")
+      if (map.hasKey("album")) album = map.getString("album")
+      if (map.hasKey("artist")) artist = map.getString("artist")
+      if (map.hasKey("minDuration")) minDuration = map.getDouble("minDuration").toLong()
+      if (map.hasKey("maxDuration")) maxDuration = map.getDouble("maxDuration").toLong()
+      if (map.hasKey("minSize")) minSize = map.getDouble("minSize").toLong()
+      if (map.hasKey("maxSize")) maxSize = map.getDouble("maxSize").toLong()
+      if (map.hasKey("minResolution")) minResolution = map.getInt("minResolution")
+      if (map.hasKey("maxResolution")) maxResolution = map.getInt("maxResolution")
+      if (map.hasKey("startDate")) startDate = map.getDouble("startDate").toLong()
+      if (map.hasKey("endDate")) endDate = map.getDouble("endDate").toLong()
+      if (map.hasKey("includeHidden")) includeHidden = map.getBoolean("includeHidden")
+      if (map.hasKey("favoritesOnly")) favoritesOnly = map.getBoolean("favoritesOnly")
+      if (map.hasKey("playlistId")) playlistId = map.getString("playlistId")
+    }
+  }
+
+  private fun parsePagination(map: ReadableMap?): PaginationOptionsRecord? {
+    if (map == null) return null
+    return PaginationOptionsRecord().apply {
+      if (map.hasKey("limit")) limit = map.getInt("limit")
+      if (map.hasKey("offset")) offset = map.getInt("offset")
+      if (map.hasKey("cursor")) cursor = map.getString("cursor")
+    }
+  }
+
+  private fun parseSearchOptions(map: ReadableMap): SearchOptionsRecord {
+    return SearchOptionsRecord().apply {
+      query = map.getString("query") ?: ""
+      if (map.hasKey("types")) { val a = map.getArray("types"); types = (0 until (a?.size() ?: 0)).map { a?.getString(it) ?: "" } }
+      if (map.hasKey("sort")) sort = parseSort(map.getMap("sort"))
+      if (map.hasKey("filter")) filter = parseFilter(map.getMap("filter"))
+      if (map.hasKey("pagination")) pagination = parsePagination(map.getMap("pagination"))
+    }
+  }
+
+  // --- Result conversion helpers ---
+
+  private fun <T> List<T>.toWritableArray(transform: (T) -> Map<String, Any?>): WritableArray {
+    return Arguments.createArray().apply { this@toWritableArray.forEach { pushMap(Arguments.makeNativeMap(transform(it))) } }
+  }
+
+  private fun Map<String, Any?>.toWritableMap(): WritableMap = Arguments.makeNativeMap(this)
+
+  // --- Module Methods ---
+
+  private fun <T> coroutineMethod(block: suspend CoroutineScope.() -> T, promise: Promise) {
+    moduleScope.launch(Dispatchers.IO) {
+      try { val result = block(); withContext(Dispatchers.Main) { promise.resolve(result) } }
+      catch (e: Exception) { withContext(Dispatchers.Main) { promise.reject("QUERY_FAILED", e.message, e) } }
+    }
+  }
+
+  @ReactMethod
+  fun getAudio(sort: ReadableMap?, filter: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val f = parseFilter(filter); val p = parsePagination(pagination)
+      val cacheKey = "audio:${s}:${f}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryAudio(queryBuilder.buildAudioProjection(), queryBuilder.buildFilter(f), null, sortOrder)
+      val result = cursor?.use { mapper.mapAudio(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getVideos(sort: ReadableMap?, filter: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val f = parseFilter(filter); val p = parsePagination(pagination)
+      val cacheKey = "videos:${s}:${f}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryVideo(queryBuilder.buildVideoProjection(), queryBuilder.buildFilter(f), null, sortOrder)
+      val result = cursor?.use { mapper.mapVideo(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getImages(sort: ReadableMap?, filter: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val f = parseFilter(filter); val p = parsePagination(pagination)
+      val cacheKey = "images:${s}:${f}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryImages(queryBuilder.buildImageProjection(), queryBuilder.buildFilter(f), null, sortOrder)
+      val result = cursor?.use { mapper.mapImages(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getDocuments(sort: ReadableMap?, filter: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val f = parseFilter(filter); val p = parsePagination(pagination)
+      val cacheKey = "documents:${s}:${f}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryDocuments(queryBuilder.buildDocumentProjection(), queryBuilder.buildDocumentFilter(f), null, sortOrder)
+      val result = cursor?.use { mapper.mapDocuments(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getAlbums(sort: ReadableMap?, filter: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val f = parseFilter(filter); val p = parsePagination(pagination)
+      val cacheKey = "albums:${s}:${f}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryAlbums(queryBuilder.buildAlbumProjection(), queryBuilder.buildAlbumFilter(f), null, sortOrder)
+      val result = cursor?.use { mapper.mapAlbums(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getArtists(sort: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val p = parsePagination(pagination)
+      val cacheKey = "artists:${s}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryArtists(queryBuilder.buildArtistProjection(), null, null, sortOrder)
+      val result = cursor?.use { mapper.mapArtists(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getGenres(sort: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val p = parsePagination(pagination)
+      val cacheKey = "genres:${s}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryGenres(queryBuilder.buildGenreProjection(), null, null, sortOrder)
+      val result = cursor?.use { mapper.mapGenres(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getPlaylists(sort: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val p = parsePagination(pagination)
+      val cacheKey = "playlists:${s}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryPlaylists(queryBuilder.buildPlaylistProjection(), null, null, sortOrder)
+      val result = cursor?.use { mapper.mapPlaylists(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getFolders(sort: ReadableMap?, filter: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val f = parseFilter(filter); val p = parsePagination(pagination)
+      val cacheKey = "folders:${s}:${f}:${p}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val cursor = repository.queryFolders(queryBuilder.buildDocumentFilter(f), sortOrder)
+      val result = cursor?.use { mapper.mapFolders(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getFolderStatistics(folderPath: String?, promise: Promise) {
+    coroutineMethod({
+      val cacheKey = "folderStats:${folderPath}"
+      cache.get(cacheKey)?.let { return@coroutineMethod it }
+      val cursor = repository.queryFolderStatistics(folderPath)
+      val result = cursor?.use { mapper.mapFolderStatistics(it).map { r -> r.toMap() } } ?: emptyList<Map<String, Any?>>()
+      cache.put(cacheKey, result)
+      result
+    }, promise)
+  }
+
+  @ReactMethod
+  fun refreshIncremental(lastTimestamp: Double?, promise: Promise) {
+    coroutineMethod({
+      val since = lastTimestamp?.toLong() ?: cache.getLastRefreshTimestamp()
+      var addedCount = 0
+      for (type in listOf("audio", "video", "image", "document")) {
+        val projection = when (type) { "audio" -> queryBuilder.buildAudioProjection(); "video" -> queryBuilder.buildVideoProjection(); "image" -> queryBuilder.buildImageProjection(); "document" -> queryBuilder.buildDocumentProjection(); else -> continue }
+        val cursor = repository.queryIncremental(since, projection, type)
+        cursor?.use { addedCount += it.count }
+      }
+      val removedItems = cache.getAndClearRemovedItems()
+      cache.setLastRefreshTimestamp(System.currentTimeMillis())
+      IncrementalChangesRecord().apply { added = addedCount; removed = removedItems.size; timestamp = System.currentTimeMillis() }.toMap()
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getLastRefreshTimestamp(promise: Promise) {
+    promise.resolve(cache.getLastRefreshTimestamp().toDouble())
+  }
+
+  @ReactMethod
+  fun search(options: ReadableMap, promise: Promise) {
+    coroutineMethod({ repository.search(parseSearchOptions(options)).toMap() }, promise)
+  }
+
+  @ReactMethod
+  fun getById(mediaType: String, id: String, promise: Promise) {
+    coroutineMethod({
+      val cursor = when (mediaType) { "audio" -> repository.queryAudio(queryBuilder.buildAudioProjection(), "${MediaStore.Audio.Media._ID} = ?", arrayOf(id), null); "video" -> repository.queryVideo(queryBuilder.buildVideoProjection(), "${MediaStore.Video.Media._ID} = ?", arrayOf(id), null); "image" -> repository.queryImages(queryBuilder.buildImageProjection(), "${MediaStore.Images.Media._ID} = ?", arrayOf(id), null); "document" -> repository.queryDocuments(queryBuilder.buildDocumentProjection(), "${MediaStore.Files.FileColumns._ID} = ?", arrayOf(id), null); else -> null }
+      if (cursor != null) cursor.use { val item = mapper.mapSingle(it, mediaType); when (item) { is AudioRecord -> item.toMap(); is VideoRecord -> item.toMap(); is ImageRecord -> item.toMap(); is DocumentRecord -> item.toMap(); else -> null } } else null
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getByUri(uri: String, promise: Promise) {
+    coroutineMethod({
+      val mediaType = mapper.detectMediaType(uri)
+      val cursor = repository.queryByUri(uri)
+      if (cursor != null) cursor.use { val item = mapper.mapSingle(it, mediaType); when (item) { is AudioRecord -> item.toMap(); is VideoRecord -> item.toMap(); is ImageRecord -> item.toMap(); is DocumentRecord -> item.toMap(); else -> null } } else null
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getRecent(mediaType: String?, limit: Int?, promise: Promise) {
+    coroutineMethod({
+      val actualLimit = limit ?: 50
+      val sortOrder = "${MediaStore.MediaColumns.DATE_ADDED} DESC LIMIT $actualLimit"
+      val results = mutableListOf<Map<String, Any?>>()
+      val types = if (mediaType != null) listOf(mediaType) else listOf("audio", "video", "image", "document")
+      for (type in types) {
+        val cursor = when (type) { "audio" -> repository.queryAudio(queryBuilder.buildAudioProjection(), null, null, sortOrder); "video" -> repository.queryVideo(queryBuilder.buildVideoProjection(), null, null, sortOrder); "image" -> repository.queryImages(queryBuilder.buildImageProjection(), null, null, sortOrder); "document" -> repository.queryDocuments(queryBuilder.buildDocumentProjection(), null, null, sortOrder); else -> null }
+        if (cursor != null) { when (type) { "audio" -> cursor.use { results.addAll(mapper.mapGenericToAudio(it).map { r -> r.toMap() }) }; "video" -> cursor.use { results.addAll(mapper.mapGenericToVideo(it).map { r -> r.toMap() }) }; "image" -> cursor.use { results.addAll(mapper.mapGenericToImage(it).map { r -> r.toMap() }) }; "document" -> cursor.use { results.addAll(mapper.mapGenericToDocument(it).map { r -> r.toMap() }) } } }
+      }
+      results
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getFavorites(mediaType: String?, sort: ReadableMap?, pagination: ReadableMap?, promise: Promise) {
+    coroutineMethod({
+      val s = parseSort(sort); val p = parsePagination(pagination)
+      val favoriteSelection = "${MediaStore.MediaColumns.IS_FAVORITE} = 1"
+      val sortOrder = queryBuilder.applyPagination(queryBuilder.buildSortOrder(s), p)
+      val results = mutableListOf<Map<String, Any?>>()
+      val types = if (mediaType != null) listOf(mediaType) else listOf("audio", "video", "image", "document")
+      for (type in types) {
+        val cursor = when (type) { "audio" -> repository.queryAudio(queryBuilder.buildAudioProjection(), favoriteSelection, null, sortOrder); "video" -> repository.queryVideo(queryBuilder.buildVideoProjection(), favoriteSelection, null, sortOrder); "image" -> repository.queryImages(queryBuilder.buildImageProjection(), favoriteSelection, null, sortOrder); "document" -> repository.queryDocuments(queryBuilder.buildDocumentProjection(), favoriteSelection, null, sortOrder); else -> null }
+        if (cursor != null) { when (type) { "audio" -> cursor.use { results.addAll(mapper.mapGenericToAudio(it).map { r -> r.toMap() }) }; "video" -> cursor.use { results.addAll(mapper.mapGenericToVideo(it).map { r -> r.toMap() }) }; "image" -> cursor.use { results.addAll(mapper.mapGenericToImage(it).map { r -> r.toMap() }) }; "document" -> cursor.use { results.addAll(mapper.mapGenericToDocument(it).map { r -> r.toMap() }) } } }
+      }
+      results
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getLargestFiles(mediaType: String?, limit: Int?, promise: Promise) {
+    coroutineMethod({
+      val actualLimit = limit ?: 50
+      val sortOrder = "${MediaStore.MediaColumns.SIZE} DESC LIMIT $actualLimit"
+      val results = mutableListOf<Map<String, Any?>>()
+      val types = if (mediaType != null) listOf(mediaType) else listOf("audio", "video", "image", "document")
+      for (type in types) {
+        val cursor = when (type) { "audio" -> repository.queryAudio(queryBuilder.buildAudioProjection(), null, null, sortOrder); "video" -> repository.queryVideo(queryBuilder.buildVideoProjection(), null, null, sortOrder); "image" -> repository.queryImages(queryBuilder.buildImageProjection(), null, null, sortOrder); "document" -> repository.queryDocuments(queryBuilder.buildDocumentProjection(), null, null, sortOrder); else -> null }
+        if (cursor != null) { when (type) { "audio" -> cursor.use { results.addAll(mapper.mapGenericToAudio(it).map { r -> r.toMap() }) }; "video" -> cursor.use { results.addAll(mapper.mapGenericToVideo(it).map { r -> r.toMap() }) }; "image" -> cursor.use { results.addAll(mapper.mapGenericToImage(it).map { r -> r.toMap() }) }; "document" -> cursor.use { results.addAll(mapper.mapGenericToDocument(it).map { r -> r.toMap() }) } } }
+      }
+      results
+    }, promise)
+  }
+
+  @ReactMethod
+  fun getDuplicates(mediaType: String?, promise: Promise) {
+    coroutineMethod({ findDuplicates(mediaType).map { it.toMap() } }, promise)
+  }
+
+  @ReactMethod
+  fun getStatistics(promise: Promise) {
+    coroutineMethod({ repository.getStatistics().toMap() }, promise)
+  }
+
+  @ReactMethod
+  fun refresh(promise: Promise) {
+    cache.invalidate()
+    promise.resolve(null)
+  }
+
+  @ReactMethod
+  fun checkPermissions(promise: Promise) {
+    promise.resolve(Arguments.makeNativeMap(permissions.checkStatus()))
+  }
+
+  @ReactMethod
+  fun requestPermissions(promise: Promise) {
+    moduleScope.launch(Dispatchers.Main) {
+      try { val result = withContext(Dispatchers.IO) { permissions.request() }; promise.resolve(Arguments.makeNativeMap(result)) }
+      catch (e: Exception) { promise.reject("PERMISSION_DENIED", e.message, e) }
+    }
+  }
+
+  @ReactMethod
+  fun getAlbumArtwork(albumId: String?, promise: Promise) {
+    promise.resolve(com.obsidian_north.mediastore.utils.ArtworkUtils.getAlbumArtworkUri(albumId)?.toString())
+  }
+
+  @ReactMethod
+  fun getVideoThumbnail(videoId: String, width: Int?, height: Int?, promise: Promise) {
+    coroutineMethod({ generateThumbnail(videoId, "video", width, height) }, promise)
+  }
+
+  @ReactMethod
+  fun getImageThumbnail(imageId: String, width: Int?, height: Int?, promise: Promise) {
+    coroutineMethod({ generateThumbnail(imageId, "image", width, height) }, promise)
+  }
+
+  // --- Event System ---
+
+  @ReactMethod
+  fun addListener(eventName: String) {
+    if (eventName == "onMediaChange" && !isObserving) {
+      isObserving = true
+      observer.startListening { event ->
+        reactApplicationContext
+          .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+          .emit("onMediaChange", Arguments.makeNativeMap(mapOf(
+            "type" to event.type, "mediaType" to event.mediaType,
+            "itemId" to event.itemId, "uri" to event.uri
+          )))
+        if (event.type == "removed") cache.trackRemoved(event.itemId)
+        cache.invalidate()
+      }
+    }
+  }
+
+  @ReactMethod
+  fun removeListeners(count: Int) {
+    if (isObserving) {
+      isObserving = false
+      observer.stopListening()
+    }
+  }
+
+  // --- Internal Methods ---
+
+  private suspend fun generateThumbnail(mediaId: String, mediaType: String, width: Int?, height: Int?): String? {
+    return withContext(Dispatchers.IO) {
+      try {
+        val contentUri = when (mediaType) { "video" -> Uri.withAppendedPath(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, mediaId); "image" -> Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediaId); else -> return@withContext null }
+        val targetWidth = width ?: 320; val targetHeight = height ?: 240
+        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          context.contentResolver.loadThumbnail(contentUri, android.util.Size(targetWidth, targetHeight), CancellationSignal())
+        } else {
+          @Suppress("DEPRECATION")
+          when (mediaType) { "video" -> MediaStore.Video.Thumbnails.getThumbnail(context.contentResolver, mediaId.toLong(), MediaStore.Video.Thumbnails.MINI_KIND, null)
+            else -> MediaStore.Images.Thumbnails.getThumbnail(context.contentResolver, mediaId.toLong(), MediaStore.Images.Thumbnails.MINI_KIND, null) }
+        }
+        if (bitmap != null) {
+          val thumbDir = File(context.cacheDir, "mediastore_thumbnails"); thumbDir.mkdirs()
+          val thumbFile = File(thumbDir, "${mediaType}_${mediaId}_${targetWidth}x${targetHeight}.jpg")
+          FileOutputStream(thumbFile).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out) }
+          bitmap.recycle()
+          Uri.fromFile(thumbFile).toString()
+        } else null
+      } catch (e: Exception) { null }
+    }
+  }
+
+  private suspend fun findDuplicates(mediaType: String?): List<DuplicateRecord> {
+    return withContext(Dispatchers.IO) {
+      val types = if (mediaType != null) listOf(mediaType) else listOf("audio", "video", "image")
+      val allFiles = mutableListOf<Triple<String, Long, String>>()
+      for (type in types) {
+        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.SIZE)
+        val cursor = when (type) { "audio" -> repository.queryAudio(projection, "${MediaStore.MediaColumns.SIZE} > 0", null, null); "video" -> repository.queryVideo(projection, "${MediaStore.MediaColumns.SIZE} > 0", null, null); "image" -> repository.queryImages(projection, "${MediaStore.MediaColumns.SIZE} > 0", null, null); else -> null }
+        cursor?.use { while (it.moveToNext()) { val id = it.getLong(0).toString(); val path = it.getString(1) ?: continue; val size = it.getLong(2); allFiles.add(Triple(id, size, path)) } }
+      }
+      val sizeGroups = allFiles.groupBy { it.second }
+      val duplicates = mutableListOf<DuplicateRecord>()
+      for ((size, files) in sizeGroups) {
+        if (files.size < 2) continue
+        val hashGroups = mutableMapOf<String, MutableList<Triple<String, Long, String>>>()
+        for (file in files) { try { val hash = computeFileHash(file.third); hashGroups.getOrPut(hash) { mutableListOf() }.add(file) } catch (_: Exception) {} }
+        for ((hash, group) in hashGroups) { if (group.size < 2) continue; duplicates.add(DuplicateRecord().apply { fileHash = hash; count = group.size; totalSize = size * group.size }) }
+      }
+      duplicates.sortedByDescending { it.count }
+    }
+  }
+
+  private fun computeFileHash(filePath: String): String {
+    val file = File(filePath); if (!file.exists() || !file.canRead()) return ""
+    val digest = MessageDigest.getInstance("MD5"); val buffer = ByteArray(8192)
+    try { file.inputStream().use { input -> var bytesRead: Int; while (input.read(buffer).also { bytesRead = it } != -1) digest.update(buffer, 0, bytesRead) } } catch (_: Exception) { return "" }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+  }
+
+  override fun onCatalystInstanceDestroy() {
+    moduleScope.cancel()
+    if (isObserving) observer.stopListening()
+    super.onCatalystInstanceDestroy()
+  }
+}

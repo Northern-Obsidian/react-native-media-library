@@ -1,4 +1,4 @@
-package expo.modules.mediastore.utils
+package com.obsidian_north.mediastore.utils
 
 import android.database.Cursor
 
@@ -25,26 +25,19 @@ object CursorUtils {
 
   fun getDoubleOrNull(cursor: Cursor, columnName: String): Double? {
     val index = cursor.getColumnIndex(columnName)
-    return if (index >= 0) {
-      if (cursor.isNull(index)) null else cursor.getDouble(index)
-    } else null
+    return if (index >= 0) { if (cursor.isNull(index)) null else cursor.getDouble(index) } else null
   }
 
   fun getIntOrNull(cursor: Cursor, columnName: String): Int? {
     val index = cursor.getColumnIndex(columnName)
-    return if (index >= 0) {
-      if (cursor.isNull(index)) null else cursor.getInt(index)
-    } else null
+    return if (index >= 0) { if (cursor.isNull(index)) null else cursor.getInt(index) } else null
   }
 
   fun getLongOrNull(cursor: Cursor, columnName: String): Long? {
     val index = cursor.getColumnIndex(columnName)
-    return if (index >= 0) {
-      if (cursor.isNull(index)) null else cursor.getLong(index)
-    } else null
+    return if (index >= 0) { if (cursor.isNull(index)) null else cursor.getLong(index) } else null
   }
 
-  fun hasColumn(cursor: Cursor, columnName: String): Boolean {
-    return cursor.getColumnIndex(columnName) >= 0
-  }
+  fun hasColumn(cursor: Cursor, columnName: String): Boolean =
+    cursor.getColumnIndex(columnName) >= 0
 }

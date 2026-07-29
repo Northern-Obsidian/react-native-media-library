@@ -1,4 +1,4 @@
-package expo.modules.mediastore
+package com.obsidian_north.mediastore
 
 import android.Manifest
 import android.app.Activity
@@ -7,8 +7,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.facebook.react.bridge.ReactApplicationContext
 
-class MediaStorePermissions(private val context: Context) {
+class MediaStorePermissions(private val context: Context, private val reactContext: ReactApplicationContext? = null) {
   fun checkStatus(): Map<String, Any?> {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       return mapOf(
@@ -30,16 +31,12 @@ class MediaStorePermissions(private val context: Context) {
   }
 
   suspend fun request(): Map<String, Any?> {
-    if (isAlreadyGranted()) {
-      return checkStatus()
-    }
+    if (isAlreadyGranted()) return checkStatus()
 
     val activity = getActivity()
     if (activity != null) {
       val permissions = getRequiredPermissions()
       ActivityCompat.requestPermissions(activity, permissions, PERMISSION_REQUEST_CODE)
-
-      // Wait briefly for the permission dialog result, then check status
       kotlinx.coroutines.delay(500)
     }
 
@@ -58,24 +55,14 @@ class MediaStorePermissions(private val context: Context) {
 
   private fun getRequiredPermissions(): Array<String> {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      arrayOf(
-        Manifest.permission.READ_MEDIA_AUDIO,
-        Manifest.permission.READ_MEDIA_VIDEO,
-        Manifest.permission.READ_MEDIA_IMAGES
-      )
+      arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_IMAGES)
     } else {
       arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
   }
 
   private fun getActivity(): Activity? {
-    return try {
-      val activityClass = Class.forName("expo.modules.ReactActivityWrapper")
-      val method = activityClass.getMethod("getCurrentActivity")
-      method.invoke(null) as? Activity
-    } catch (_: Exception) {
-      null
-    }
+    return reactContext?.currentActivity
   }
 
   private fun isPermissionGranted(permission: String): Boolean {

@@ -1,4 +1,4 @@
-package expo.modules.mediastore
+package com.obsidian_north.mediastore
 
 import android.database.Cursor
 import android.net.Uri
@@ -6,18 +6,16 @@ import android.os.Build
 import android.provider.MediaStore
 import android.provider.MediaStore.Files.FileColumns
 import androidx.exifinterface.media.ExifInterface
-import expo.modules.mediastore.models.*
-import expo.modules.mediastore.utils.ArtworkUtils
-import expo.modules.mediastore.utils.CursorUtils
-import expo.modules.mediastore.utils.MimeUtils
+import com.obsidian_north.mediastore.models.*
+import com.obsidian_north.mediastore.utils.ArtworkUtils
+import com.obsidian_north.mediastore.utils.CursorUtils
+import com.obsidian_north.mediastore.utils.MimeUtils
 import java.io.File
 
 class MediaStoreMapper {
   fun mapAudio(cursor: Cursor): List<AudioRecord> {
     val items = mutableListOf<AudioRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapAudioRow(cursor))
-    }
+    while (cursor.moveToNext()) items.add(mapAudioRow(cursor))
     return items
   }
 
@@ -30,7 +28,6 @@ class MediaStoreMapper {
       artist = CursorUtils.getString(cursor, MediaStore.Audio.Media.ARTIST)
       album = CursorUtils.getString(cursor, MediaStore.Audio.Media.ALBUM)
       albumId = CursorUtils.getLong(cursor, MediaStore.Audio.Media.ALBUM_ID).toString()
-      genre = null
       duration = CursorUtils.getLong(cursor, MediaStore.Audio.Media.DURATION)
       size = CursorUtils.getLong(cursor, MediaStore.Audio.Media.SIZE)
       trackNumber = CursorUtils.getInt(cursor, MediaStore.Audio.Media.TRACK)
@@ -39,18 +36,12 @@ class MediaStoreMapper {
       dateAdded = CursorUtils.getLong(cursor, MediaStore.Audio.Media.DATE_ADDED) * 1000L
       dateModified = CursorUtils.getLong(cursor, MediaStore.Audio.Media.DATE_MODIFIED) * 1000L
       composer = CursorUtils.getStringOrNull(cursor, MediaStore.Audio.Media.COMPOSER)
-      lyrics = null
       albumArtist = CursorUtils.getStringOrNull(cursor, MediaStore.Audio.Media.ALBUM_ARTIST)
-      isFavorite = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        CursorUtils.getInt(cursor, MediaStore.Audio.Media.IS_FAVORITE) == 1
-      } else false
-      playCount = 0
-      lastPlayed = 0L
+      isFavorite = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) CursorUtils.getInt(cursor, MediaStore.Audio.Media.IS_FAVORITE) == 1 else false
       bookmark = CursorUtils.getLong(cursor, MediaStore.Audio.Media.BOOKMARK)
       bitrate = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.BITRATE)
       sampleRate = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.SAMPLE_RATE)
       channels = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.CHANNEL_COUNT)
-      encoding = null
       mimeType = CursorUtils.getString(cursor, MediaStore.Audio.Media.MIME_TYPE)
       fileExtension = data.substringAfterLast('.', "")
       relativePath = CursorUtils.getString(cursor, MediaStore.Audio.Media.RELATIVE_PATH)
@@ -61,24 +52,20 @@ class MediaStoreMapper {
 
   fun mapVideo(cursor: Cursor): List<VideoRecord> {
     val items = mutableListOf<VideoRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapVideoRow(cursor))
-    }
+    while (cursor.moveToNext()) items.add(mapVideoRow(cursor))
     return items
   }
 
   fun mapVideoRow(cursor: Cursor): VideoRecord {
     val data = CursorUtils.getString(cursor, MediaStore.Video.Media.DATA)
-    val width = CursorUtils.getInt(cursor, MediaStore.Video.Media.WIDTH)
-    val height = CursorUtils.getInt(cursor, MediaStore.Video.Media.HEIGHT)
+    val w = CursorUtils.getInt(cursor, MediaStore.Video.Media.WIDTH)
+    val h = CursorUtils.getInt(cursor, MediaStore.Video.Media.HEIGHT)
     return VideoRecord().apply {
       id = CursorUtils.getLong(cursor, MediaStore.Video.Media._ID).toString()
       uri = data
       title = CursorUtils.getString(cursor, MediaStore.Video.Media.TITLE)
       duration = CursorUtils.getLong(cursor, MediaStore.Video.Media.DURATION)
-      this.width = width
-      this.height = height
-      frameRate = null
+      width = w; height = h
       rotation = CursorUtils.getInt(cursor, MediaStore.Video.Media.ORIENTATION)
       size = CursorUtils.getLong(cursor, MediaStore.Video.Media.SIZE)
       mimeType = CursorUtils.getString(cursor, MediaStore.Video.Media.MIME_TYPE)
@@ -86,32 +73,22 @@ class MediaStoreMapper {
       displayName = CursorUtils.getString(cursor, MediaStore.Video.Media.DISPLAY_NAME)
       dateAdded = CursorUtils.getLong(cursor, MediaStore.Video.Media.DATE_ADDED) * 1000L
       dateModified = CursorUtils.getLong(cursor, MediaStore.Video.Media.DATE_MODIFIED) * 1000L
-      resolution = "${width}x${height}"
+      resolution = "${w}x${h}"
       orientation = CursorUtils.getInt(cursor, MediaStore.Video.Media.ORIENTATION)
     }
   }
 
   fun mapImages(cursor: Cursor): List<ImageRecord> {
     val items = mutableListOf<ImageRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapImageRow(cursor))
-    }
+    while (cursor.moveToNext()) items.add(mapImageRow(cursor))
     return items
   }
 
   fun mapImageRow(cursor: Cursor): ImageRecord {
     val data = CursorUtils.getString(cursor, MediaStore.Images.Media.DATA)
-    var cameraMake: String? = null
-    var cameraModel: String? = null
+    var cameraMake: String? = null; var cameraModel: String? = null
     if (data.isNotEmpty()) {
-      try {
-        val file = File(data)
-        if (file.exists()) {
-          val exif = ExifInterface(data)
-          cameraMake = exif.getAttribute(ExifInterface.TAG_MAKE)
-          cameraModel = exif.getAttribute(ExifInterface.TAG_MODEL)
-        }
-      } catch (_: Exception) {}
+      try { val file = File(data); if (file.exists()) { val exif = ExifInterface(data); cameraMake = exif.getAttribute(ExifInterface.TAG_MAKE); cameraModel = exif.getAttribute(ExifInterface.TAG_MODEL) } } catch (_: Exception) {}
     }
     return ImageRecord().apply {
       id = CursorUtils.getLong(cursor, MediaStore.Images.Media._ID).toString()
@@ -120,8 +97,7 @@ class MediaStoreMapper {
       width = CursorUtils.getInt(cursor, MediaStore.Images.Media.WIDTH)
       height = CursorUtils.getInt(cursor, MediaStore.Images.Media.HEIGHT)
       orientation = CursorUtils.getInt(cursor, MediaStore.Images.Media.ORIENTATION)
-      this.cameraMake = cameraMake
-      this.cameraModel = cameraModel
+      this.cameraMake = cameraMake; this.cameraModel = cameraModel
       dateTaken = CursorUtils.getLong(cursor, MediaStore.Images.Media.DATE_TAKEN)
       gpsLatitude = CursorUtils.getDoubleOrNull(cursor, MediaStore.Images.Media.LATITUDE)
       gpsLongitude = CursorUtils.getDoubleOrNull(cursor, MediaStore.Images.Media.LONGITUDE)
@@ -136,9 +112,7 @@ class MediaStoreMapper {
 
   fun mapDocuments(cursor: Cursor): List<DocumentRecord> {
     val items = mutableListOf<DocumentRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapDocumentRow(cursor))
-    }
+    while (cursor.moveToNext()) items.add(mapDocumentRow(cursor))
     return items
   }
 
@@ -167,9 +141,7 @@ class MediaStoreMapper {
         title = CursorUtils.getString(cursor, MediaStore.Audio.Albums.ALBUM)
         artist = CursorUtils.getString(cursor, MediaStore.Audio.Albums.ARTIST)
         songCount = CursorUtils.getInt(cursor, MediaStore.Audio.Albums.NUMBER_OF_SONGS)
-        duration = 0L
         artworkUri = ArtworkUtils.getAlbumArtworkUri(albumId).toString()
-        dateAdded = 0L
         year = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Albums.FIRST_YEAR)
       })
     }
@@ -184,8 +156,6 @@ class MediaStoreMapper {
         name = CursorUtils.getString(cursor, MediaStore.Audio.Artists.ARTIST)
         albumCount = CursorUtils.getInt(cursor, MediaStore.Audio.Artists.NUMBER_OF_ALBUMS)
         songCount = CursorUtils.getInt(cursor, MediaStore.Audio.Artists.NUMBER_OF_TRACKS)
-        duration = 0L
-        dateAdded = 0L
       })
     }
     return items
@@ -197,8 +167,6 @@ class MediaStoreMapper {
       items.add(GenreRecord().apply {
         id = CursorUtils.getLong(cursor, MediaStore.Audio.Genres._ID).toString()
         name = CursorUtils.getString(cursor, MediaStore.Audio.Genres.NAME)
-        songCount = 0
-        duration = 0L
       })
     }
     return items
@@ -210,8 +178,6 @@ class MediaStoreMapper {
       items.add(PlaylistRecord().apply {
         id = CursorUtils.getLong(cursor, MediaStore.Audio.Playlists._ID).toString()
         name = CursorUtils.getString(cursor, MediaStore.Audio.Playlists.NAME)
-        songCount = 0
-        duration = 0L
         dateAdded = CursorUtils.getLong(cursor, MediaStore.Audio.Playlists.DATE_ADDED) * 1000L
         dateModified = CursorUtils.getLong(cursor, MediaStore.Audio.Playlists.DATE_MODIFIED) * 1000L
       })
@@ -229,8 +195,6 @@ class MediaStoreMapper {
             id = path.hashCode().toString()
             name = path.trimEnd('/').substringAfterLast('/').ifEmpty { path.trimEnd('/') }
             this.path = path
-            fileCount = 0
-            totalSize = 0L
           }
         }
         folder.fileCount++
@@ -252,84 +216,32 @@ class MediaStoreMapper {
             id = path.hashCode().toString()
             name = path.trimEnd('/').substringAfterLast('/').ifEmpty { path.trimEnd('/') }
             this.path = path
-            fileCount = 0
-            totalSize = 0L
-            histogram = SizeHistogramRecord()
-            mediaTypeBreakdown = MediaTypeBreakdownRecord()
           }
         }
-        folder.fileCount++
-        folder.totalSize += size
-        when {
-          size < 1_048_576L -> folder.histogram.lessThan1MB++
+        folder.fileCount++; folder.totalSize += size
+        when { size < 1_048_576L -> folder.histogram.lessThan1MB++
           size < 10_485_760L -> folder.histogram.from1to10MB++
           size < 104_857_600L -> folder.histogram.from10to100MB++
           size < 1_073_741_824L -> folder.histogram.from100MBto1GB++
-          else -> folder.histogram.greaterThan1GB++
-        }
-        when {
-          mimeType.startsWith("audio/") -> folder.mediaTypeBreakdown.audio++
+          else -> folder.histogram.greaterThan1GB++ }
+        when { mimeType.startsWith("audio/") -> folder.mediaTypeBreakdown.audio++
           mimeType.startsWith("video/") -> folder.mediaTypeBreakdown.video++
           mimeType.startsWith("image/") -> folder.mediaTypeBreakdown.image++
-          else -> folder.mediaTypeBreakdown.document++
-        }
+          else -> folder.mediaTypeBreakdown.document++ }
       }
     }
-    return folderMap.values.map { folder ->
-      folder.averageFileSize = if (folder.fileCount > 0) folder.totalSize.toDouble() / folder.fileCount else 0.0
-      folder
-    }
+    return folderMap.values.map { folder -> folder.averageFileSize = if (folder.fileCount > 0) folder.totalSize.toDouble() / folder.fileCount else 0.0; folder }
   }
 
   fun mapSingle(cursor: Cursor, mediaType: String): Any? {
     if (!cursor.moveToFirst()) return null
-    return when (mediaType) {
-      "audio" -> mapAudioRow(cursor)
-      "video" -> mapVideoRow(cursor)
-      "image" -> mapImageRow(cursor)
-      "document" -> mapDocumentRow(cursor)
-      else -> null
-    }
+    return when (mediaType) { "audio" -> mapAudioRow(cursor); "video" -> mapVideoRow(cursor); "image" -> mapImageRow(cursor); "document" -> mapDocumentRow(cursor); else -> null }
   }
 
-  fun mapGenericToAudio(cursor: Cursor): List<AudioRecord> {
-    val items = mutableListOf<AudioRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapAudioRow(cursor))
-    }
-    return items
-  }
+  fun mapGenericToAudio(cursor: Cursor): List<AudioRecord> { val items = mutableListOf<AudioRecord>(); while (cursor.moveToNext()) items.add(mapAudioRow(cursor)); return items }
+  fun mapGenericToVideo(cursor: Cursor): List<VideoRecord> { val items = mutableListOf<VideoRecord>(); while (cursor.moveToNext()) items.add(mapVideoRow(cursor)); return items }
+  fun mapGenericToImage(cursor: Cursor): List<ImageRecord> { val items = mutableListOf<ImageRecord>(); while (cursor.moveToNext()) items.add(mapImageRow(cursor)); return items }
+  fun mapGenericToDocument(cursor: Cursor): List<DocumentRecord> { val items = mutableListOf<DocumentRecord>(); while (cursor.moveToNext()) items.add(mapDocumentRow(cursor)); return items }
 
-  fun mapGenericToVideo(cursor: Cursor): List<VideoRecord> {
-    val items = mutableListOf<VideoRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapVideoRow(cursor))
-    }
-    return items
-  }
-
-  fun mapGenericToImage(cursor: Cursor): List<ImageRecord> {
-    val items = mutableListOf<ImageRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapImageRow(cursor))
-    }
-    return items
-  }
-
-  fun mapGenericToDocument(cursor: Cursor): List<DocumentRecord> {
-    val items = mutableListOf<DocumentRecord>()
-    while (cursor.moveToNext()) {
-      items.add(mapDocumentRow(cursor))
-    }
-    return items
-  }
-
-  fun detectMediaType(uri: String): String {
-    return when {
-      uri.contains("audio") -> "audio"
-      uri.contains("video") -> "video"
-      uri.contains("images") -> "image"
-      else -> "document"
-    }
-  }
+  fun detectMediaType(uri: String): String = when { uri.contains("audio") -> "audio"; uri.contains("video") -> "video"; uri.contains("images") -> "image"; else -> "document" }
 }
