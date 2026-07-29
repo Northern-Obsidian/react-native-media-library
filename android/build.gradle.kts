@@ -13,8 +13,6 @@ android {
 
     defaultConfig {
         minSdk = 24
-        versionCode = 1
-        versionName = "2.1.2"
     }
 
     compileOptions {
@@ -32,6 +30,6 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":expo-modules-core"))
+    api(project(":expo-modules-core"))
     implementation("androidx.exifinterface:exifinterface:1.3.7")
 }
