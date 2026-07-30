@@ -10,4 +10,4 @@ coverage
 .git
 *.log
 *.iml
-ios
+ios/Pods

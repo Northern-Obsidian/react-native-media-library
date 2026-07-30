@@ -79,7 +79,7 @@ export async function getAudio(
     filter ?? null,
     pagination ?? null
   );
-  return applyPlugins(result) as AudioItem[];
+  return applyPlugins(result);
 }
 
 export async function getVideos(
@@ -92,7 +92,7 @@ export async function getVideos(
     filter ?? null,
     pagination ?? null
   );
-  return applyPlugins(result) as VideoItem[];
+  return applyPlugins(result);
 }
 
 export async function getImages(
@@ -105,7 +105,7 @@ export async function getImages(
     filter ?? null,
     pagination ?? null
   );
-  return applyPlugins(result) as ImageItem[];
+  return applyPlugins(result);
 }
 
 export async function getDocuments(
@@ -118,7 +118,7 @@ export async function getDocuments(
     filter ?? null,
     pagination ?? null
   );
-  return applyPlugins(result) as DocumentItem[];
+  return applyPlugins(result);
 }
 
 export async function getAlbums(
@@ -126,28 +126,28 @@ export async function getAlbums(
   filter?: FilterOptions,
   pagination?: PaginationOptions
 ): Promise<Album[]> {
-  return NativeModule.getAlbums(sort ?? null, filter ?? null, pagination ?? null) as Promise<Album[]>;
+  return NativeModule.getAlbums(sort ?? null, filter ?? null, pagination ?? null);
 }
 
 export async function getArtists(
   sort?: SortOptions,
   pagination?: PaginationOptions
 ): Promise<Artist[]> {
-  return NativeModule.getArtists(sort ?? null, pagination ?? null) as Promise<Artist[]>;
+  return NativeModule.getArtists(sort ?? null, pagination ?? null);
 }
 
 export async function getGenres(
   sort?: SortOptions,
   pagination?: PaginationOptions
 ): Promise<Genre[]> {
-  return NativeModule.getGenres(sort ?? null, pagination ?? null) as Promise<Genre[]>;
+  return NativeModule.getGenres(sort ?? null, pagination ?? null);
 }
 
 export async function getPlaylists(
   sort?: SortOptions,
   pagination?: PaginationOptions
 ): Promise<Playlist[]> {
-  return NativeModule.getPlaylists(sort ?? null, pagination ?? null) as Promise<Playlist[]>;
+  return NativeModule.getPlaylists(sort ?? null, pagination ?? null);
 }
 
 export async function getFolders(
@@ -155,20 +155,20 @@ export async function getFolders(
   filter?: FilterOptions,
   pagination?: PaginationOptions
 ): Promise<Folder[]> {
-  return NativeModule.getFolders(sort ?? null, filter ?? null, pagination ?? null) as Promise<Folder[]>;
+  return NativeModule.getFolders(sort ?? null, filter ?? null, pagination ?? null);
 }
 
 export async function search(
   options: SearchOptions
 ): Promise<SearchResult> {
-  const result = await NativeModule.search(options) as Record<string, any>;
+  const result = await NativeModule.search(options);
   return {
-    audio: applyPlugins(result.audio ?? []) as AudioItem[],
-    videos: applyPlugins(result.videos ?? []) as VideoItem[],
-    images: applyPlugins(result.images ?? []) as ImageItem[],
-    documents: applyPlugins(result.documents ?? []) as DocumentItem[],
-    totalCount: result.totalCount ?? 0,
-    query: result.query ?? "",
+    audio: applyPlugins(result.audio),
+    videos: applyPlugins(result.videos),
+    images: applyPlugins(result.images),
+    documents: applyPlugins(result.documents),
+    totalCount: result.totalCount,
+    query: result.query,
   };
 }
 
@@ -217,11 +217,11 @@ export async function getLargestFiles(
 export async function getDuplicates(
   mediaType?: "audio" | "video" | "image" | "document"
 ): Promise<DuplicateItem[]> {
-  return NativeModule.getDuplicates(mediaType ?? null) as Promise<DuplicateItem[]>;
+  return NativeModule.getDuplicates(mediaType ?? null);
 }
 
 export async function getStatistics(): Promise<MediaStoreStatistics> {
-  return NativeModule.getStatistics() as Promise<MediaStoreStatistics>;
+  return NativeModule.getStatistics();
 }
 
 export async function refresh(): Promise<void> {
@@ -229,11 +229,11 @@ export async function refresh(): Promise<void> {
 }
 
 export async function checkPermissions(): Promise<PermissionStatus> {
-  return NativeModule.checkPermissions() as Promise<PermissionStatus>;
+  return NativeModule.checkPermissions();
 }
 
 export async function requestPermissions(): Promise<PermissionStatus> {
-  return NativeModule.requestPermissions() as Promise<PermissionStatus>;
+  return NativeModule.requestPermissions();
 }
 
 export function useMediaChangeEvent(
@@ -263,7 +263,7 @@ export async function getLibrary(
     sort ?? null,
     filter ?? null,
     pagination ?? null
-  ) as Promise<LibraryResult>;
+  );
 }
 
 export async function getLibraryQuery(
@@ -280,28 +280,28 @@ export async function getLibraryQuery(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.audio ?? opts.pagination ?? null
-        ).then((r) => applyPlugins(r) as AudioItem[])
+        ).then((r) => applyPlugins(r))
       : Promise.resolve([] as AudioItem[]),
     types.includes("video")
       ? NativeModule.getVideos(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.video ?? opts.pagination ?? null
-        ).then((r) => applyPlugins(r) as VideoItem[])
+        ).then((r) => applyPlugins(r))
       : Promise.resolve([] as VideoItem[]),
     types.includes("image")
       ? NativeModule.getImages(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.image ?? opts.pagination ?? null
-        ).then((r) => applyPlugins(r) as ImageItem[])
+        ).then((r) => applyPlugins(r))
       : Promise.resolve([] as ImageItem[]),
     types.includes("document")
       ? NativeModule.getDocuments(
           opts.sort ?? null,
           opts.filter ?? null,
           typePag.document ?? opts.pagination ?? null
-        ).then((r) => applyPlugins(r) as DocumentItem[])
+        ).then((r) => applyPlugins(r))
       : Promise.resolve([] as DocumentItem[]),
   ]);
 
@@ -382,13 +382,13 @@ export async function getImageThumbnail(
 export async function getFolderStatistics(
   folderPath?: string
 ): Promise<FolderStatistics[]> {
-  return NativeModule.getFolderStatistics(folderPath ?? null) as Promise<FolderStatistics[]>;
+  return NativeModule.getFolderStatistics(folderPath ?? null);
 }
 
 export async function refreshIncremental(
   lastTimestamp?: number
 ): Promise<IncrementalChanges> {
-  return NativeModule.refreshIncremental(lastTimestamp ?? null) as Promise<IncrementalChanges>;
+  return NativeModule.refreshIncremental(lastTimestamp ?? null);
 }
 
 export async function getLastRefreshTimestamp(): Promise<number> {
@@ -410,33 +410,30 @@ export function getRegisteredPlugins(): MetadataPlugin[] {
   return Array.from(registeredPlugins.values());
 }
 
-function applyPlugins(
-  items: Record<string, any>[]
-): (AudioItem | VideoItem | ImageItem | DocumentItem)[] {
-  if (registeredPlugins.size === 0) return items as (AudioItem | VideoItem | ImageItem | DocumentItem)[];
+function applyPlugins<T extends AudioItem | VideoItem | ImageItem | DocumentItem>(
+  items: T[]
+): T[] {
+  if (registeredPlugins.size === 0) return items;
 
   return items.map((item) => {
-    const merged = { ...item };
+    const copy = { ...item } as unknown as Record<string, unknown>;
     const custom: Record<string, unknown> = {};
 
     for (const plugin of registeredPlugins.values()) {
       try {
-        const result = plugin.extract(item as AudioItem | VideoItem | ImageItem | DocumentItem);
+        const result = plugin.extract(item);
         if (result && typeof result === "object") {
           Object.assign(custom, result);
         }
       } catch (_e) {
-        // Plugin errors are silently ignored
       }
     }
 
     if (Object.keys(custom).length > 0) {
-      merged.customMetadata = {
-        ...(merged.customMetadata ?? {}),
-        ...custom,
-      };
+      const existing = copy.customMetadata as Record<string, unknown> | undefined;
+      copy.customMetadata = { ...(existing ?? {}), ...custom };
     }
 
-    return merged as unknown as AudioItem | VideoItem | ImageItem | DocumentItem;
+    return copy as unknown as T;
   });
 }

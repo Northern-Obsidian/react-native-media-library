@@ -121,7 +121,7 @@ No entire library is loaded into memory. Each row is mapped and collected increm
 - **Real-time change observation** — `ContentObserver` (Android) / `PHPhotoLibraryChangeObserver` (iOS) fires events when files are added, removed, or modified
 - **Permissions-aware** — scoped `READ_MEDIA_*` permissions on Android 13+, `PHPhotoLibrary` authorization on iOS, automatic fallback
 - **LRU caching** — optional in-memory cache with configurable TTL, auto-invalidated on changes
-- **Fully typed** — complete TypeScript definitions, no `any`
+- **Fully typed** — complete TypeScript definitions with a strongly typed TurboModule Spec (concrete return types, no `any`)
 - **Reactive** — React hook `useMediaChangeEvent` for real-time updates
 - **Batch queries** — `getLibrary()` returns all media types in one native call
 - **Thumbnail/artwork** — helper methods for album art and video/image thumbnails
@@ -1103,7 +1103,7 @@ Document queries are Android-only. iOS returns an empty array.
 **A:** Yes. Use `getVideoThumbnail(videoId)`.
 
 **Q: Is it typed?**
-**A:** Yes. 100% TypeScript with no `any`.
+**A:** Yes. The TurboModule Spec uses concrete types (`AudioItem[]`, `Album[]`, `FolderStatistics[]`, etc.) — no `Record<string, any>`.
 
 ---
 
@@ -1121,8 +1121,13 @@ react-native-mediastore/
  │       ├── MediaStoreObserver.kt
  │       ├── MediaStorePermissions.kt
  │       ├── MediaStoreCache.kt
- │       ├── models/
- │       ├── utils/
+  │       ├── models/
+  │       │   ├── Options.kt
+  │       │   ├── MediaRecords.kt
+  │       │   ├── CollectionRecords.kt
+  │       │   ├── FolderRecords.kt
+  │       │   └── ResultRecords.kt
+  │       ├── utils/
  │       └── extensions/
  ├── ios/
  │   ├── RNMediaStore.podspec
@@ -1173,11 +1178,15 @@ react-native-mediastore/
   ✓ Plugin hooks for custom metadata
   ✓ Batch library query improvements
 
-3.0 (Current)
+3.1 (Current)
   ✓ Migrated from Expo Module to pure React Native TurboModule
   ✓ No dependency on expo-modules-core
   ✓ Compatible with RN CLI, Expo prebuild, and EAS Build
-  ✓ Codegen-ready with NativeMediaStore spec
+  ✓ Codegen-ready with NativeMediaStore spec (strongly typed)
+  ✓ Strongly typed TurboModule Spec — concrete return types, no Record<string, any>
+  ✓ Zero Expo references in native code
+  ✓ Android model layer rebuilt for RN bridge pattern
+  ✓ Cleaner public API — no unnecessary type casts
   ☐ AI semantic search
   ☐ Smart albums / auto-playlists
   ☐ EXIF utilities (editing GPS, date)

@@ -1,34 +1,56 @@
 import type { TurboModule } from "react-native";
 import { TurboModuleRegistry } from "react-native";
+import type {
+  AudioItem,
+  VideoItem,
+  ImageItem,
+  DocumentItem,
+  Album,
+  Artist,
+  Genre,
+  Playlist,
+  Folder,
+  FolderStatistics,
+  SearchResult,
+  SearchOptions,
+  SortOptions,
+  FilterOptions,
+  PaginationOptions,
+  MediaStoreStatistics,
+  DuplicateItem,
+  PermissionStatus,
+  LibraryResult,
+  IncrementalChanges,
+} from "./MediaStoreModule.types";
 
 export interface Spec extends TurboModule {
-  getAudio(sort: Record<string, any> | null, filter: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getVideos(sort: Record<string, any> | null, filter: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getImages(sort: Record<string, any> | null, filter: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getDocuments(sort: Record<string, any> | null, filter: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getAlbums(sort: Record<string, any> | null, filter: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getArtists(sort: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getGenres(sort: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getPlaylists(sort: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getFolders(sort: Record<string, any> | null, filter: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getFolderStatistics(folderPath: string | null): Promise<Record<string, any>[]>;
-  getStatistics(): Promise<Record<string, any>>;
-  search(options: Record<string, any>): Promise<Record<string, any>>;
-  getById(mediaType: string, id: string): Promise<Record<string, any> | null>;
-  getByUri(uri: string): Promise<Record<string, any> | null>;
-  getRecent(mediaType: string | null, limit: number | null): Promise<Record<string, any>[]>;
-  getFavorites(mediaType: string | null, sort: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>[]>;
-  getLargestFiles(mediaType: string | null, limit: number | null): Promise<Record<string, any>[]>;
-  getDuplicates(mediaType: string | null): Promise<Record<string, any>[]>;
+  getAudio(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<AudioItem[]>;
+  getVideos(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<VideoItem[]>;
+  getImages(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<ImageItem[]>;
+  getDocuments(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<DocumentItem[]>;
+  getAlbums(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<Album[]>;
+  getArtists(sort: SortOptions | null, pagination: PaginationOptions | null): Promise<Artist[]>;
+  getGenres(sort: SortOptions | null, pagination: PaginationOptions | null): Promise<Genre[]>;
+  getPlaylists(sort: SortOptions | null, pagination: PaginationOptions | null): Promise<Playlist[]>;
+  getFolders(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<Folder[]>;
+  getFolderStatistics(folderPath: string | null): Promise<FolderStatistics[]>;
+  getStatistics(): Promise<MediaStoreStatistics>;
+  search(options: SearchOptions): Promise<SearchResult>;
+  getById(mediaType: string, id: string): Promise<AudioItem | VideoItem | ImageItem | DocumentItem | null>;
+  getByUri(uri: string): Promise<AudioItem | VideoItem | ImageItem | DocumentItem | null>;
+  getRecent(mediaType: string | null, limit: number | null): Promise<(AudioItem | VideoItem | ImageItem | DocumentItem)[]>;
+  getFavorites(mediaType: string | null, sort: SortOptions | null, pagination: PaginationOptions | null): Promise<(AudioItem | VideoItem | ImageItem | DocumentItem)[]>;
+  getLargestFiles(mediaType: string | null, limit: number | null): Promise<(AudioItem | VideoItem | ImageItem | DocumentItem)[]>;
+  getDuplicates(mediaType: string | null): Promise<DuplicateItem[]>;
   refresh(): Promise<void>;
-  refreshIncremental(lastTimestamp: number | null): Promise<Record<string, any>>;
+  refreshIncremental(lastTimestamp: number | null): Promise<IncrementalChanges>;
   getLastRefreshTimestamp(): Promise<number>;
-  checkPermissions(): Promise<Record<string, any>>;
-  requestPermissions(): Promise<Record<string, any>>;
+  checkPermissions(): Promise<PermissionStatus>;
+  requestPermissions(): Promise<PermissionStatus>;
   getAlbumArtwork(albumId: string): Promise<string | null>;
   getVideoThumbnail(videoId: string, width: number | null, height: number | null): Promise<string | null>;
   getImageThumbnail(imageId: string, width: number | null, height: number | null): Promise<string | null>;
-  getLibrary(sort: Record<string, any> | null, filter: Record<string, any> | null, pagination: Record<string, any> | null): Promise<Record<string, any>>;
+  getLibrary(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<LibraryResult>;
   addListener(eventName: string): void;
   removeListeners(count: number): void;
 }

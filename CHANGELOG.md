@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.1.0 (2026-07-30)
+
+### Improvements
+
+- **Strongly typed TurboModule Spec**: `NativeMediaStore.ts` now uses concrete return types (`AudioItem[]`, `Album[]`, `FolderStatistics[]`, `SearchResult`, etc.) instead of `Record<string, any>` — full type safety through the native bridge
+- **Removed 17 unnecessary casts** from `index.ts` — the typed Spec eliminated all manual `as Promise<X>` assertions
+- **Rebuilt missing Android model classes**: Created `android/.../models/` package (5 files) with properly typed toMap() methods for the RN bridge pattern
+
+### Bug Fixes
+
+- **Fixed `.npmignore`**: Changed `ios` → `ios/Pods` — was excluding all iOS source files from npm publish
+- **No Expo traces**: Confirmed zero Expo imports, dependencies, or config in library native code
+
 ## 2.0.0 (2026-07-10)
 
 ### Breaking Changes
