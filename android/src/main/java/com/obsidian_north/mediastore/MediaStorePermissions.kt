@@ -13,9 +13,9 @@ class MediaStorePermissions(private val context: Context, private val reactConte
   fun checkStatus(): Map<String, Any?> {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       return mapOf(
-        "granted" to isPermissionGranted(Manifest.permission.READ_MEDIA_AUDIO) &&
+        "granted" to (isPermissionGranted(Manifest.permission.READ_MEDIA_AUDIO) &&
           isPermissionGranted(Manifest.permission.READ_MEDIA_VIDEO) &&
-          isPermissionGranted(Manifest.permission.READ_MEDIA_IMAGES),
+          isPermissionGranted(Manifest.permission.READ_MEDIA_IMAGES)),
         "audio" to isPermissionGranted(Manifest.permission.READ_MEDIA_AUDIO),
         "video" to isPermissionGranted(Manifest.permission.READ_MEDIA_VIDEO),
         "images" to isPermissionGranted(Manifest.permission.READ_MEDIA_IMAGES)

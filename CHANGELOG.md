@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.2 (2026-08-01)
+
+### Bug Fixes
+
+- **Android permissions compile fix**: Added missing parentheses around `&&` chain in `MediaStorePermissions.kt` — Kotlin `to` infix operator binds tighter than `&&`, causing a `Pair<String, Boolean>` vs `Boolean` type mismatch
+
 ## 3.1.1 (2026-08-01)
 
 ### Bug Fixes
