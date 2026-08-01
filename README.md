@@ -2,7 +2,7 @@
 
 **Universal high-performance media indexing library for Android and iOS.**
 
-A pure React Native TurboModule that provides fast, production-grade access to media and indexed documents on Android (via MediaStore) and iOS (via Photos Framework) — no recursive filesystem scanning.
+A pure React Native native module that provides fast, production-grade access to media and indexed documents on Android (via MediaStore) and iOS (via Photos Framework) — no recursive filesystem scanning.
 
 <div align="center">
 
@@ -21,7 +21,7 @@ App
 TypeScript SDK
  │
  ▼
-React Native Native Module (TurboModule)
+React Native Native Module
  │
  ├── Permission Manager
  ├── Cache Manager (LRU + TTL)
@@ -121,7 +121,7 @@ No entire library is loaded into memory. Each row is mapped and collected increm
 - **Real-time change observation** — `ContentObserver` (Android) / `PHPhotoLibraryChangeObserver` (iOS) fires events when files are added, removed, or modified
 - **Permissions-aware** — scoped `READ_MEDIA_*` permissions on Android 13+, `PHPhotoLibrary` authorization on iOS, automatic fallback
 - **LRU caching** — optional in-memory cache with configurable TTL, auto-invalidated on changes
-- **Fully typed** — complete TypeScript definitions with a strongly typed TurboModule Spec (concrete return types, no `any`)
+- **Fully typed** — complete TypeScript definitions with a strongly typed native module spec (concrete return types, no `any`)
 - **Reactive** — React hook `useMediaChangeEvent` for real-time updates
 - **Batch queries** — `getLibrary()` returns all media types in one native call
 - **Thumbnail/artwork** — helper methods for album art and video/image thumbnails
@@ -1103,7 +1103,7 @@ Document queries are Android-only. iOS returns an empty array.
 **A:** Yes. Use `getVideoThumbnail(videoId)`.
 
 **Q: Is it typed?**
-**A:** Yes. The TurboModule Spec uses concrete types (`AudioItem[]`, `Album[]`, `FolderStatistics[]`, etc.) — no `Record<string, any>`.
+**A:** Yes. The native module spec uses concrete types (`AudioItem[]`, `Album[]`, `FolderStatistics[]`, etc.) — no `Record<string, any>`.
 
 ---
 
@@ -1138,7 +1138,6 @@ react-native-mediastore/
  ├── src/
  │   ├── index.ts
  │   ├── MediaStoreModule.ts
- │   ├── NativeMediaStore.ts
  │   └── MediaStoreModule.types.ts
  ├── build/
  ├── __tests__/
@@ -1179,11 +1178,10 @@ react-native-mediastore/
   ✓ Batch library query improvements
 
 3.1 (Current)
-  ✓ Migrated from Expo Module to pure React Native TurboModule
+  ✓ Migrated from Expo Module to pure React Native native module
   ✓ No dependency on expo-modules-core
   ✓ Compatible with RN CLI, Expo prebuild, and EAS Build
-  ✓ Codegen-ready with NativeMediaStore spec (strongly typed)
-  ✓ Strongly typed TurboModule Spec — concrete return types, no Record<string, any>
+  ✓ Strongly typed native module spec — concrete return types, no Record<string, any>
   ✓ Zero Expo references in native code
   ✓ Android model layer rebuilt for RN bridge pattern
   ✓ Cleaner public API — no unnecessary type casts

@@ -45,11 +45,6 @@
     "react-native.config.js",
     "!**/*.tsbuildinfo"
   ],
-  "codegenConfig": {
-    "name": "RNMediaStoreSpecs",
-    "type": "modules",
-    "jsSrcsDir": "src"
-  },
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/react": "~18.3.0",
