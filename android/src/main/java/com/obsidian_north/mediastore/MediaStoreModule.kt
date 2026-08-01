@@ -351,7 +351,7 @@ class MediaStoreModule(reactContext: ReactApplicationContext) : ReactContextBase
 
   @ReactMethod
   fun getAlbumArtwork(albumId: String?, promise: Promise) {
-    promise.resolve(com.obsidian_north.mediastore.utils.ArtworkUtils.getAlbumArtworkUri(albumId)?.toString())
+    promise.resolve(com.obsidian_north.mediastore.utils.ArtworkUtils.getAlbumArtworkUri(albumId.orEmpty())?.toString())
   }
 
   @ReactMethod

@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.1 (2026-08-01)
+
+### Bug Fixes
+
+- **Android compile fixes**: Removed non-portable `SAMPLE_RATE`/`CHANNEL_COUNT` column references from the audio query projection and mapper (`MediaStoreQueryBuilder.kt`, `MediaStoreMapper.kt`)
+- **Fixed nullable argument**: `getAlbumArtwork` no longer passes a `String?` into `ArtworkUtils.getAlbumArtworkUri(albumId: String)` (`MediaStoreModule.kt`)
+
 ## 3.1.0 (2026-07-30)
 
 ### Improvements

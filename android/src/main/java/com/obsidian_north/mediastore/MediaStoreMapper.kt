@@ -40,8 +40,6 @@ class MediaStoreMapper {
       isFavorite = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) CursorUtils.getInt(cursor, MediaStore.Audio.Media.IS_FAVORITE) == 1 else false
       bookmark = CursorUtils.getLong(cursor, MediaStore.Audio.Media.BOOKMARK)
       bitrate = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.BITRATE)
-      sampleRate = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.SAMPLE_RATE)
-      channels = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.CHANNEL_COUNT)
       mimeType = CursorUtils.getString(cursor, MediaStore.Audio.Media.MIME_TYPE)
       fileExtension = data.substringAfterLast('.', "")
       relativePath = CursorUtils.getString(cursor, MediaStore.Audio.Media.RELATIVE_PATH)
