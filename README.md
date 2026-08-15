@@ -6,6 +6,12 @@ A pure React Native native module that provides fast, production-grade access to
 
 <div align="center">
 
+![react-native-mediastore](image.png)
+
+</div>
+
+<div align="center">
+
 | Build | Lint | Type Check | Tests | Release |
 |-------|------|------------|-------|---------|
 | ✅ | ✅ | ✅ | ✅ | ✅ |
