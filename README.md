@@ -124,8 +124,10 @@ No entire library is loaded into memory. Each row is mapped and collected increm
 - **Fully typed** — complete TypeScript definitions with a strongly typed native module spec (concrete return types, no `any`)
 - **Reactive** — React hook `useMediaChangeEvent` for real-time updates
 - **Batch queries** — `getLibrary()` returns all media types in one native call
-- **Thumbnail/artwork** — helper methods for album art and video/image thumbnails
-- **Folder statistics** — size histograms and per-type breakdowns for folders
+ - **Thumbnail/artwork** — helper methods for album art and video/image thumbnails
+ - **Comprehensive deep metadata** — `getDetailedMetadata()` / `getDetailedMetadataByUri()` open the file to extract true technical metadata: codec, bitrate, sample rate, channels, color space (audio/video), and full EXIF (aperture, ISO, focal length, GPS, flash, white balance…) for images; best-effort page/word counts for documents
+ - **Robust album artwork** — Android extracts embedded album art via `MediaMetadataRetriever` (works on Android 10+ scoped storage); iOS uses the album's representative asset
+ - **Folder statistics** — size histograms and per-type breakdowns for folders
 - **Incremental indexing** — delta-only refresh tracking added, modified, and removed items
 - **Plugin hooks** — extensible metadata system via JS-side plugin registration
 - **Improved batch queries** — per-type pagination, selective type fetching, and query timing
@@ -318,6 +320,89 @@ function MediaWatcher() {
 | `registerPlugin(plugin)` | `void` | Register a metadata extractor plugin |
 | `unregisterPlugin(pluginId)` | `boolean` | Remove a plugin by ID |
 | `getRegisteredPlugins()` | `MetadataPlugin[]` | List all registered plugins |
+
+### Detailed Metadata
+
+`DetailedMetadata` performs **deep, on-demand extraction** — it opens the file (Android: `MediaExtractor` / `ExifInterface`; iOS: `AVAsset` / `CGImageSource`) to read true technical and capture metadata that is not available from the media index. Use it per-item (e.g. when a user opens a detail screen); do **not** call it inside bulk loops, as each call does file I/O.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `getDetailedMetadata(mediaType, id)` | `DetailedMetadata \| null` | Deep metadata for a media item by type + database ID |
+| `getDetailedMetadataByUri(uri)` | `DetailedMetadata \| null` | Deep metadata for a media item by content URI or file path |
+
+```typescript
+import { getDetailedMetadata } from "@obsidian_north/react-native-mediastore";
+
+const meta = await getDetailedMetadata("video", videoId);
+console.log(meta?.video?.codec);        // "h264"
+console.log(meta?.video?.width);        // 1920
+console.log(meta?.audio?.sampleRate);   // 48000 (audio track)
+console.log(meta?.image?.exif?.iso);    // 400 (for images)
+```
+
+Bulk queries (`getAudio`, `getVideos`, …) are also enriched with **cheap catalog columns** (read from the media index, no file I/O). New optional fields:
+
+- `AudioItem`: `writer`, `isMusic`, `isPodcast`, `isRingtone`, `isAlarm`, `isNotification`, `cdTrackNumber`, `numTracks`
+- `VideoItem`: `colorStandard`, `colorTransfer`, `videoCodec`, `bucketId`, `bucketDisplayName`, `dateTaken`
+- `ImageItem`: `bucketId`, `bucketDisplayName`, `description`
+- `DocumentItem`: `title`, `isFavorite`
+
+### DetailedMetadata Types
+
+```typescript
+interface DetailedMetadata {
+  mediaType: "audio" | "video" | "image" | "document";
+  mimeType: string;
+  fileSize: number;
+  containerFormat?: string;     // "mp4", "mkv", "mp3" ...
+  durationMs?: number;          // audio/video
+  audio?: AudioFormatMetadata;
+  video?: VideoFormatMetadata;
+  image?: ImageFormatMetadata;
+  document?: DocumentFormatMetadata;
+  raw?: Record<string, unknown>;
+}
+
+interface AudioFormatMetadata {
+  codec?: string; codecMime?: string; codecProfile?: string;
+  bitrate?: number; sampleRate?: number; channels?: number;
+  channelLayout?: string; bitsPerSample?: number; durationMs?: number; language?: string;
+}
+
+interface VideoFormatMetadata {
+  codec?: string; codecMime?: string; profile?: string; level?: string;
+  bitrate?: number; width?: number; height?: number; frameRate?: number;
+  rotation?: number; colorSpace?: string; colorStandard?: string;
+  colorTransfer?: string; hasBFrames?: boolean; durationMs?: number; language?: string;
+}
+
+interface ImageFormatMetadata {
+  format?: string; width?: number; height?: number;
+  bitsPerSample?: number; colorSpace?: string; exif?: ExifMetadata;
+}
+
+interface ExifMetadata {
+  make?: string; model?: string; software?: string; lensMake?: string; lensModel?: string;
+  imageDescription?: string; artist?: string; copyright?: string;
+  dateTimeOriginal?: number; dateTimeDigitized?: number; orientation?: number;
+  aperture?: number; iso?: number; shutterSpeed?: number; exposureTime?: number;
+  exposureProgram?: string; exposureBias?: number; meteringMode?: string;
+  flash?: boolean; flashMode?: string; whiteBalance?: string;
+  focalLength?: number; focalLength35mm?: number; sceneCaptureType?: string;
+  contrast?: string; saturation?: string; sharpness?: string; digitalZoomRatio?: number;
+  compressedBitsPerPixel?: number; gpsLatitude?: number; gpsLongitude?: number;
+  gpsAltitude?: number; gpsTimestamp?: number; gpsProcessingMethod?: string;
+  colorSpace?: string; pixelXDimension?: number; pixelYDimension?: number;
+}
+
+interface DocumentFormatMetadata {
+  format?: string; pageCount?: number; wordCount?: number;
+  characterCount?: number; lineCount?: number; title?: string;
+  author?: string; creator?: string; producer?: string; subject?: string;
+  keywords?: string[]; language?: string; isEncrypted?: boolean;
+  creationDate?: number; modificationDate?: number;
+}
+```
 
 ### Artwork & Thumbnails
 
@@ -1177,7 +1262,7 @@ react-native-mediastore/
   ✓ Plugin hooks for custom metadata
   ✓ Batch library query improvements
 
-3.1 (Current)
+3.2 (Current)
   ✓ Migrated from Expo Module to pure React Native native module
   ✓ No dependency on expo-modules-core
   ✓ Compatible with RN CLI, Expo prebuild, and EAS Build
@@ -1185,6 +1270,9 @@ react-native-mediastore/
   ✓ Zero Expo references in native code
   ✓ Android model layer rebuilt for RN bridge pattern
   ✓ Cleaner public API — no unnecessary type casts
+  ✓ Comprehensive deep metadata (`getDetailedMetadata` / `getDetailedMetadataByUri`) — codec, bitrate, sample rate, channels, color space (audio/video) + full EXIF (images)
+  ✓ Rich catalog columns on bulk queries (writer, isMusic/isPodcast/isRingtone…, bucket, colorStandard/colorTransfer, document title)
+  ✓ Robust album artwork — embedded picture extraction on Android 10+ (scoped storage)
   ☐ AI semantic search
   ☐ Smart albums / auto-playlists
   ☐ EXIF utilities (editing GPS, date)

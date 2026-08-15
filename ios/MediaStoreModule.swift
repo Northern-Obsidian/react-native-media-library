@@ -153,6 +153,20 @@ class MediaStoreModule: RCTEventEmitter {
     resolve(repository.getByUri(uri: uri))
   }
 
+  @objc
+  func getDetailedMetadata(_ mediaType: String, id: String,
+                           resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getDetailedMetadata(mediaType: mediaType, id: id))
+  }
+
+  @objc
+  func getDetailedMetadataByUri(_ uri: String,
+                                resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let repository = MediaStoreRepository()
+    resolve(repository.getDetailedMetadataByUri(uri: uri))
+  }
+
   // MARK: - Recent
 
   @objc

@@ -26,6 +26,14 @@ class AudioRecord {
   var sampleRate: Int? = null
   var channels: Int? = null
   var encoding: String? = null
+  var writer: String? = null
+  var isMusic: Boolean? = null
+  var isPodcast: Boolean? = null
+  var isRingtone: Boolean? = null
+  var isAlarm: Boolean? = null
+  var isNotification: Boolean? = null
+  var cdTrackNumber: Int? = null
+  var numTracks: Int? = null
   var mimeType: String = ""
   var fileExtension: String = ""
   var relativePath: String = ""
@@ -41,7 +49,11 @@ class AudioRecord {
     "composer" to composer, "lyrics" to lyrics, "albumArtist" to albumArtist,
     "isFavorite" to isFavorite, "playCount" to playCount, "lastPlayed" to lastPlayed,
     "bookmark" to bookmark, "bitrate" to bitrate, "sampleRate" to sampleRate,
-    "channels" to channels, "encoding" to encoding, "mimeType" to mimeType,
+    "channels" to channels, "encoding" to encoding, "writer" to writer,
+    "isMusic" to isMusic, "isPodcast" to isPodcast, "isRingtone" to isRingtone,
+    "isAlarm" to isAlarm, "isNotification" to isNotification,
+    "cdTrackNumber" to cdTrackNumber, "numTracks" to numTracks,
+    "mimeType" to mimeType,
     "fileExtension" to fileExtension, "relativePath" to relativePath,
     "displayName" to displayName, "contentUri" to contentUri
   )
@@ -64,6 +76,10 @@ class VideoRecord {
   var dateModified: Long = 0L
   var resolution: String = ""
   var orientation: Int = 0
+  var colorStandard: String? = null
+  var colorTransfer: String? = null
+  var bucketId: String? = null
+  var bucketDisplayName: String? = null
 
   fun toMap(): Map<String, Any?> = mapOf(
     "id" to id, "uri" to uri, "title" to title,
@@ -72,7 +88,9 @@ class VideoRecord {
     "mimeType" to mimeType, "relativePath" to relativePath,
     "displayName" to displayName, "dateAdded" to dateAdded,
     "dateModified" to dateModified, "resolution" to resolution,
-    "orientation" to orientation
+    "orientation" to orientation, "colorStandard" to colorStandard,
+    "colorTransfer" to colorTransfer, "bucketId" to bucketId,
+    "bucketDisplayName" to bucketDisplayName
   )
 }
 
@@ -94,6 +112,8 @@ class ImageRecord {
   var displayName: String = ""
   var dateAdded: Long = 0L
   var dateModified: Long = 0L
+  var bucketId: String? = null
+  var bucketDisplayName: String? = null
 
   fun toMap(): Map<String, Any?> = mapOf(
     "id" to id, "uri" to uri, "title" to title,
@@ -102,7 +122,8 @@ class ImageRecord {
     "dateTaken" to dateTaken, "gpsLatitude" to gpsLatitude,
     "gpsLongitude" to gpsLongitude, "mimeType" to mimeType, "size" to size,
     "relativePath" to relativePath, "displayName" to displayName,
-    "dateAdded" to dateAdded, "dateModified" to dateModified
+    "dateAdded" to dateAdded, "dateModified" to dateModified,
+    "bucketId" to bucketId, "bucketDisplayName" to bucketDisplayName
   )
 }
 
@@ -116,10 +137,11 @@ class DocumentRecord {
   var relativePath: String = ""
   var dateAdded: Long = 0L
   var dateModified: Long = 0L
+  var title: String? = null
 
   fun toMap(): Map<String, Any?> = mapOf(
     "id" to id, "uri" to uri, "name" to name, "size" to size,
-    "mimeType" to mimeType, "extension" to extension,
+    "mimeType" to mimeType, "extension" to extension, "title" to title,
     "relativePath" to relativePath, "dateAdded" to dateAdded,
     "dateModified" to dateModified
   )

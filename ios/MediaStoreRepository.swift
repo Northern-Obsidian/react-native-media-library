@@ -1,6 +1,9 @@
 import Photos
 import AVFoundation
 import UIKit
+import ImageIO
+import PDFKit
+import CoreMedia
 
 class MediaStoreRepository {
   private let imageManager = PHCachingImageManager()
@@ -391,6 +394,73 @@ class MediaStoreRepository {
     default:
       return nil
     }
+  }
+
+  // MARK: - Detailed Metadata
+
+  func getDetailedMetadata(mediaType: String, id: String) -> [String: Any?]? {
+    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
+    guard let asset = fetchResult.firstObject else { return nil }
+
+    let resources = PHAssetResource.assetResources(for: asset)
+    guard let resource = resources.first else { return nil }
+    guard let url = resource.value(forKey: "URL") as? URL else { return nil }
+
+    let assetMediaType: String = {
+      switch asset.mediaType {
+      case .audio: return "audio"
+      case .video: return "video"
+      case .image: return "image"
+      default: return "document"
+      }
+    }()
+    let resolvedMediaType = (mediaType != assetMediaType) ? assetMediaType : mediaType
+    let mime = resource.uniformTypeIdentifier ?? mimeTypeFromExtension(url.pathExtension)
+
+    return extractMetadata(for: url, mediaType: resolvedMediaType, mimeType: mime)
+  }
+
+  func getDetailedMetadataByUri(uri: String) -> [String: Any?]? {
+    var resolvedUrl: URL?
+    var resolvedMediaType: String?
+    var resolvedMime: String?
+
+    if let candidate = URL(string: uri), candidate.scheme == "file" {
+      resolvedUrl = candidate
+      resolvedMime = mimeTypeFromExtension(candidate.pathExtension)
+      resolvedMediaType = mediaTypeFromExtension(candidate.pathExtension)
+    } else if URL(string: uri)?.scheme == nil {
+      // Plain filesystem path or a PHAsset local identifier (no scheme).
+      let fileCandidate = URL(fileURLWithPath: uri)
+      if FileManager.default.fileExists(atPath: fileCandidate.path) {
+        resolvedUrl = fileCandidate
+        resolvedMime = mimeTypeFromExtension(fileCandidate.pathExtension)
+        resolvedMediaType = mediaTypeFromExtension(fileCandidate.pathExtension)
+      } else {
+        // Treat as a PHAsset local identifier.
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [uri], options: nil)
+        guard let asset = fetchResult.firstObject else { return nil }
+        let resources = PHAssetResource.assetResources(for: asset)
+        guard let resource = resources.first,
+              let url = resource.value(forKey: "URL") as? URL else { return nil }
+        resolvedUrl = url
+        resolvedMime = resource.uniformTypeIdentifier ?? mimeTypeFromExtension(url.pathExtension)
+        resolvedMediaType = {
+          switch asset.mediaType {
+          case .audio: return "audio"
+          case .video: return "video"
+          case .image: return "image"
+          default: return "document"
+          }
+        }()
+      }
+    }
+
+    guard let url = resolvedUrl else { return nil }
+    let mediaType = resolvedMediaType ?? "document"
+    let mime = resolvedMime ?? ""
+
+    return extractMetadata(for: url, mediaType: mediaType, mimeType: mime)
   }
 
   // MARK: - Recent
@@ -873,6 +943,426 @@ class MediaStoreRepository {
     }
 
     return result
+  }
+
+  // MARK: - Detailed Metadata Extraction
+
+  private func extractMetadata(for url: URL, mediaType: String, mimeType: String) -> [String: Any?] {
+    var result: [String: Any?] = [:]
+    result["mediaType"] = mediaType
+    result["mimeType"] = mimeType
+    result["fileSize"] = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue
+      ?? (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+
+    if mediaType == "audio" || mediaType == "video" {
+      let av = extractAudioVideoMetadata(for: url, mimeType: mimeType)
+      if let durationMs = av["durationMs"] { result["durationMs"] = durationMs }
+      if let containerFormat = av["containerFormat"] { result["containerFormat"] = containerFormat }
+      if let audio = av["audio"] as? [String: Any?] { result["audio"] = compact(audio) }
+      if let video = av["video"] as? [String: Any?] { result["video"] = compact(video) }
+    } else if mediaType == "image" {
+      result["image"] = compact(extractImageMetadata(for: url))
+    } else {
+      result["document"] = compact(extractDocumentMetadata(for: url))
+    }
+
+    return compact(result)
+  }
+
+  private func extractAudioVideoMetadata(for url: URL, mimeType: String) -> [String: Any?] {
+    let asset = AVURLAsset(url: url)
+    var result: [String: Any?] = [:]
+
+    let durationSeconds = asset.duration.seconds
+    result["durationMs"] = durationSeconds.isFinite ? Int(durationSeconds * 1000) : nil
+    result["containerFormat"] = containerFormat(from: mimeType, pathExtension: url.pathExtension)
+
+    var audioDict: [String: Any?]?
+    var videoDict: [String: Any?]?
+
+    for track in asset.tracks {
+      if track.mediaType == .audio {
+        var ad: [String: Any?] = [:]
+        ad["language"] = track.languageCode
+        if let af = track.formatDescriptions.first as? CMFormatDescription {
+          let exts = af.extensions as? [AnyHashable: Any] ?? [:]
+          if let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(af)?.pointee {
+            if asbd.mSampleRate > 0 { ad["sampleRate"] = Int(asbd.mSampleRate) }
+            if asbd.mChannelsPerFrame > 0 { ad["channels"] = Int(asbd.mChannelsPerFrame) }
+            if asbd.mBitsPerChannel > 0 { ad["bitsPerSample"] = Int(asbd.mBitsPerChannel) }
+          }
+          if let bitrate = exts[kCMFormatDescriptionExtension_AudioBitRate] as? NSNumber
+            ?? exts[kCMFormatDescriptionExtension_BitRate] as? NSNumber {
+            ad["bitrate"] = bitrate.intValue
+          }
+          if let formatName = exts[kCMFormatDescriptionExtension_FormatName] as? String {
+            ad["codecMime"] = formatName
+            ad["codec"] = normalizeAudioCodec(formatName: formatName)
+          }
+          if let channels = ad["channels"] as? Int {
+            ad["channelLayout"] = channelLayout(for: channels)
+          }
+        }
+        audioDict = ad
+      } else if track.mediaType == .video {
+        var vd: [String: Any?] = [:]
+        if track.nominalFrameRate > 0 { vd["frameRate"] = Double(track.nominalFrameRate) }
+        vd["rotation"] = rotationDegrees(from: track.preferredTransform)
+        vd["language"] = track.languageCode
+        if let vf = track.formatDescriptions.first as? CMFormatDescription {
+          let exts = vf.extensions as? [AnyHashable: Any] ?? [:]
+          let dims = CMVideoFormatDescriptionGetDimensions(vf)
+          if dims.width > 0 { vd["width"] = Int(dims.width) }
+          if dims.height > 0 { vd["height"] = Int(dims.height) }
+          if let bitrate = exts[kCMFormatDescriptionExtension_VideoBitRate] as? NSNumber {
+            vd["bitrate"] = bitrate.intValue
+          }
+          if let formatName = exts[kCMFormatDescriptionExtension_FormatName] as? String {
+            vd["codecMime"] = formatName
+            vd["codec"] = normalizeVideoCodec(formatName: formatName)
+          }
+          vd["profile"] = exts[kCMFormatDescriptionExtension_Profile] as? String
+          vd["level"] = exts[kCMFormatDescriptionExtension_Level] as? String
+          vd["colorSpace"] = exts[kCMFormatDescriptionExtension_ColorPrimaries] as? String
+          vd["colorStandard"] = exts[kCMFormatDescriptionExtension_YCbCrMatrix] as? String
+          vd["colorTransfer"] = exts[kCMFormatDescriptionExtension_TransferFunction] as? String
+        }
+        if vd["width"] == nil {
+          let size = asset.naturalSize
+          if size.width > 0 { vd["width"] = Int(size.width) }
+          if size.height > 0 { vd["height"] = Int(size.height) }
+        }
+        videoDict = vd
+      }
+    }
+
+    result["audio"] = audioDict
+    result["video"] = videoDict
+    return result
+  }
+
+  private func extractImageMetadata(for url: URL) -> [String: Any?] {
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+      return [:]
+    }
+
+    var result: [String: Any?] = [:]
+    let type = CGImageSourceGetType(source) as String?
+    result["format"] = imageFormat(from: type)
+
+    guard let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
+      return compact(result)
+    }
+
+    result["width"] = props[kCGImagePropertyPixelWidth as String] as? Int
+    result["height"] = props[kCGImagePropertyPixelHeight as String] as? Int
+    result["bitsPerSample"] = props[kCGImagePropertyDepth as String] as? Int
+    result["colorSpace"] = props[kCGImagePropertyColorModel as String] as? String
+
+    let exifDict = props[kCGImagePropertyExifDictionary as String] as? [String: Any]
+    let tiffDict = props[kCGImagePropertyTIFFDictionary as String] as? [String: Any]
+    let gpsDict = props[kCGImagePropertyGPSDictionary as String] as? [String: Any]
+
+    var exif: [String: Any?] = [:]
+    exif["make"] = tiffDict?[kCGImagePropertyTIFFMake as String] as? String
+    exif["model"] = tiffDict?[kCGImagePropertyTIFFModel as String] as? String
+    exif["software"] = tiffDict?[kCGImagePropertyTIFFSoftware as String] as? String
+    exif["imageDescription"] = tiffDict?[kCGImagePropertyTIFFImageDescription as String] as? String
+    exif["artist"] = tiffDict?[kCGImagePropertyTIFFArtist as String] as? String
+    exif["copyright"] = tiffDict?[kCGImagePropertyTIFFCopyright as String] as? String
+
+    exif["dateTimeOriginal"] = exifDateTime(exifDict?[kCGImagePropertyExifDateTimeOriginal as String] as? String)
+    exif["dateTimeDigitized"] = exifDateTime(exifDict?[kCGImagePropertyExifDateTimeDigitized as String] as? String)
+    exif["orientation"] = exifDict?[kCGImagePropertyExifOrientation as String] as? Int
+    exif["aperture"] = exifDict?[kCGImagePropertyExifFNumber as String] as? Double
+    if let isoArray = exifDict?[kCGImagePropertyExifISOSpeedRatings as String] as? [Int],
+       let iso = isoArray.first {
+      exif["iso"] = iso
+    }
+    exif["shutterSpeed"] = exifDict?[kCGImagePropertyExifShutterSpeedValue as String] as? Double
+    exif["exposureTime"] = exifDict?[kCGImagePropertyExifExposureTime as String] as? Double
+    if let ep = exifDict?[kCGImagePropertyExifExposureProgram as String] as? Int {
+      exif["exposureProgram"] = exposureProgramString(ep)
+    }
+    exif["exposureBias"] = exifDict?[kCGImagePropertyExifExposureBiasValue as String] as? Double
+    if let mm = exifDict?[kCGImagePropertyExifMeteringMode as String] as? Int {
+      exif["meteringMode"] = meteringModeString(mm)
+    }
+    if let flash = exifDict?[kCGImagePropertyExifFlash as String] as? Int {
+      exif["flash"] = (flash & 1) != 0
+      exif["flashMode"] = flashModeString(flash)
+    }
+    if let wb = exifDict?[kCGImagePropertyExifWhiteBalance as String] as? Int {
+      exif["whiteBalance"] = wb == 0 ? "Auto" : "Manual"
+    }
+    exif["focalLength"] = exifDict?[kCGImagePropertyExifFocalLength as String] as? Double
+    exif["focalLength35mm"] = exifDict?[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? Int
+    if let sct = exifDict?[kCGImagePropertyExifSceneCaptureType as String] as? Int {
+      exif["sceneCaptureType"] = sceneCaptureTypeString(sct)
+    }
+    if let c = exifDict?[kCGImagePropertyExifContrast as String] as? Int {
+      exif["contrast"] = contrastString(c)
+    }
+    if let s = exifDict?[kCGImagePropertyExifSaturation as String] as? Int {
+      exif["saturation"] = saturationString(s)
+    }
+    if let sh = exifDict?[kCGImagePropertyExifSharpness as String] as? Int {
+      exif["sharpness"] = sharpnessString(sh)
+    }
+    exif["digitalZoomRatio"] = exifDict?[kCGImagePropertyExifDigitalZoomRatio as String] as? Double
+    exif["compressedBitsPerPixel"] = exifDict?[kCGImagePropertyExifCompressedBitsPerPixel as String] as? Double
+    exif["pixelXDimension"] = exifDict?[kCGImagePropertyExifPixelXDimension as String] as? Int
+    exif["pixelYDimension"] = exifDict?[kCGImagePropertyExifPixelYDimension as String] as? Int
+    if let cs = exifDict?[kCGImagePropertyExifColorSpace as String] as? Int {
+      exif["colorSpace"] = colorSpaceString(cs)
+    }
+
+    if let lat = gpsDict?[kCGImagePropertyGPSLatitude as String] as? Double,
+       let latRef = gpsDict?[kCGImagePropertyGPSLatitudeRef as String] as? String {
+      exif["gpsLatitude"] = lat * (latRef == "S" ? -1.0 : 1.0)
+    }
+    if let lon = gpsDict?[kCGImagePropertyGPSLongitude as String] as? Double,
+       let lonRef = gpsDict?[kCGImagePropertyGPSLongitudeRef as String] as? String {
+      exif["gpsLongitude"] = lon * (lonRef == "W" ? -1.0 : 1.0)
+    }
+    exif["gpsAltitude"] = gpsDict?[kCGImagePropertyGPSAltitude as String] as? Double
+    if let gpsTime = gpsDict?[kCGImagePropertyGPSTimeStamp as String] as? String,
+       let gpsDate = gpsDict?[kCGImagePropertyGPSDateStamp as String] as? String {
+      exif["gpsTimestamp"] = exifDateTime("\(gpsDate) \(gpsTime)")
+    }
+    exif["gpsProcessingMethod"] = gpsDict?[kCGImagePropertyGPSProcessingMethod as String] as? String
+
+    result["exif"] = compact(exif)
+    return compact(result)
+  }
+
+  private func extractDocumentMetadata(for url: URL) -> [String: Any?] {
+    var result: [String: Any?] = [:]
+    result["format"] = url.pathExtension.lowercased()
+
+    if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path) {
+      if let creation = attrs[.creationDate] as? Date {
+        result["creationDate"] = Int(creation.timeIntervalSince1970 * 1000)
+      }
+      if let modification = attrs[.modificationDate] as? Date {
+        result["modificationDate"] = Int(modification.timeIntervalSince1970 * 1000)
+      }
+    }
+
+    let ext = url.pathExtension.lowercased()
+
+    if ext == "pdf" {
+      if #available(iOS 11.0, *) {
+        if let doc = PDFDocument(url: url) {
+          result["pageCount"] = doc.pageCount
+          result["isEncrypted"] = doc.isEncrypted
+        }
+      }
+    } else if ["txt", "md", "csv", "json"].contains(ext) {
+      if let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue,
+         size > 0, size <= 5_000_000 {
+        if let content = try? String(contentsOf: url, encoding: .utf8) {
+          result["characterCount"] = content.count
+          result["wordCount"] = content.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
+          result["lineCount"] = content.components(separatedBy: .newlines).count
+        }
+      }
+    }
+
+    return result
+  }
+
+  // MARK: - Detailed Metadata Helpers
+
+  private func compact(_ dict: [String: Any?]) -> [String: Any?] {
+    var result: [String: Any?] = [:]
+    for (key, value) in dict where value != nil {
+      result[key] = value
+    }
+    return result
+  }
+
+  private func mimeTypeFromExtension(_ ext: String) -> String {
+    switch ext.lowercased() {
+    case "mp3": return "audio/mpeg"
+    case "m4a": return "audio/mp4"
+    case "wav": return "audio/wav"
+    case "aac": return "audio/aac"
+    case "flac": return "audio/flac"
+    case "caf": return "audio/x-caf"
+    case "aiff", "aif": return "audio/aiff"
+    case "mp4", "m4v": return "video/mp4"
+    case "mov": return "video/quicktime"
+    case "jpg", "jpeg": return "image/jpeg"
+    case "png": return "image/png"
+    case "heic": return "image/heic"
+    case "gif": return "image/gif"
+    case "tiff", "tif": return "image/tiff"
+    case "pdf": return "application/pdf"
+    case "txt", "md", "csv", "json": return "text/plain"
+    default: return ""
+    }
+  }
+
+  private func mediaTypeFromExtension(_ ext: String) -> String {
+    switch ext.lowercased() {
+    case "mp3", "m4a", "wav", "aac", "flac", "caf", "aiff", "aif", "opus": return "audio"
+    case "mp4", "m4v", "mov", "avi", "wmv": return "video"
+    case "jpg", "jpeg", "png", "heic", "gif", "tiff", "tif", "bmp", "webp": return "image"
+    default: return "document"
+    }
+  }
+
+  private func imageFormat(from type: String?) -> String? {
+    guard let type = type else { return nil }
+    switch type {
+    case "public.jpeg": return "jpeg"
+    case "public.png": return "png"
+    case "public.heic": return "heic"
+    case "com.compuserve.gif": return "gif"
+    case "public.tiff": return "tiff"
+    case "public.bmp": return "bmp"
+    default: return nil
+    }
+  }
+
+  private func containerFormat(from mimeType: String, pathExtension: String) -> String? {
+    let ext = pathExtension.lowercased()
+    if !ext.isEmpty { return ext }
+    let lower = mimeType.lowercased()
+    if lower.contains("mp4") { return "mp4" }
+    if lower.contains("quicktime") || lower.contains("mov") { return "mov" }
+    if lower.contains("m4a") { return "m4a" }
+    return nil
+  }
+
+  private func normalizeAudioCodec(formatName: String) -> String {
+    let lower = formatName.lowercased()
+    if lower.contains("mp3") || lower.contains("mpeg") { return "mp3" }
+    if lower.contains("aac") { return "aac" }
+    if lower.contains("opus") { return "opus" }
+    if lower.contains("flac") { return "flac" }
+    if lower.contains("pcm") || lower.contains("lpcm") { return "pcm" }
+    if lower.contains("apple lossless") || lower.contains("alac") { return "alac" }
+    return lower
+  }
+
+  private func normalizeVideoCodec(formatName: String) -> String {
+    let lower = formatName.lowercased()
+    if lower.contains("h.264") || lower.contains("avc") || lower.contains("h264") { return "h264" }
+    if lower.contains("hevc") || lower.contains("h.265") || lower.contains("h265") { return "hevc" }
+    if lower.contains("vp9") { return "vp9" }
+    if lower.contains("av1") { return "av1" }
+    return lower
+  }
+
+  private func channelLayout(for channels: Int) -> String? {
+    switch channels {
+    case 1: return "mono"
+    case 2: return "stereo"
+    case 6: return "5.1"
+    case 8: return "7.1"
+    default: return nil
+    }
+  }
+
+  private func rotationDegrees(from transform: CGAffineTransform) -> Int {
+    let radians = atan2(transform.b, transform.a)
+    var degrees = Int((radians * 180 / .pi).rounded())
+    degrees = ((degrees % 360) + 360) % 360
+    return degrees
+  }
+
+  private func exifDateTime(_ value: String?) -> Int? {
+    guard let value = value, !value.isEmpty else { return nil }
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+    guard let date = formatter.date(from: value) else { return nil }
+    return Int(date.timeIntervalSince1970 * 1000)
+  }
+
+  private func exposureProgramString(_ v: Int) -> String {
+    switch v {
+    case 0: return "Undefined"
+    case 1: return "Manual"
+    case 2: return "Normal"
+    case 3: return "Aperture"
+    case 4: return "Shutter"
+    case 5: return "Creative"
+    case 6: return "Action"
+    case 7: return "Portrait"
+    case 8: return "Landscape"
+    default: return "Undefined"
+    }
+  }
+
+  private func meteringModeString(_ v: Int) -> String {
+    switch v {
+    case 0: return "Unknown"
+    case 1: return "Average"
+    case 2: return "Center"
+    case 3: return "Spot"
+    case 4: return "MultiSpot"
+    case 5: return "Pattern"
+    case 6: return "Partial"
+    default: return "Unknown"
+    }
+  }
+
+  private func flashModeString(_ v: Int) -> String {
+    let mode = (v >> 3) & 0x3
+    switch mode {
+    case 1: return "CompulsoryFire"
+    case 2: return "CompulsorySuppression"
+    case 3: return "Auto"
+    default: return "Unknown"
+    }
+  }
+
+  private func sceneCaptureTypeString(_ v: Int) -> String {
+    switch v {
+    case 0: return "Standard"
+    case 1: return "Landscape"
+    case 2: return "Portrait"
+    case 3: return "Night"
+    default: return "Standard"
+    }
+  }
+
+  private func contrastString(_ v: Int) -> String {
+    switch v {
+    case 0: return "Normal"
+    case 1: return "Soft"
+    case 2: return "Hard"
+    default: return "Normal"
+    }
+  }
+
+  private func saturationString(_ v: Int) -> String {
+    switch v {
+    case 0: return "Normal"
+    case 1: return "Low"
+    case 2: return "High"
+    default: return "Normal"
+    }
+  }
+
+  private func sharpnessString(_ v: Int) -> String {
+    switch v {
+    case 0: return "Normal"
+    case 1: return "Soft"
+    case 2: return "Hard"
+    default: return "Normal"
+    }
+  }
+
+  private func colorSpaceString(_ v: Int) -> String {
+    switch v {
+    case 1: return "sRGB"
+    case 2: return "Adobe RGB"
+    case 0: return "Uncalibrated"
+    default: return "Uncalibrated"
+    }
   }
 }
 

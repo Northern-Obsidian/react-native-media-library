@@ -29,6 +29,15 @@ export interface AudioItem {
   relativePath: string;
   displayName: string;
   contentUri: string;
+  /** Catalog flags available from MediaStore without opening the file. */
+  writer?: string | null;
+  isMusic?: boolean;
+  isPodcast?: boolean;
+  isRingtone?: boolean;
+  isAlarm?: boolean;
+  isNotification?: boolean;
+  cdTrackNumber?: number | null;
+  numTracks?: number | null;
   customMetadata?: Record<string, unknown>;
 }
 
@@ -49,6 +58,13 @@ export interface VideoItem {
   dateModified: number;
   resolution: string;
   orientation: number;
+  /** Catalog fields available from MediaStore without opening the file. */
+  colorStandard?: string | null;
+  colorTransfer?: string | null;
+  videoCodec?: string | null;
+  bucketId?: string | null;
+  bucketDisplayName?: string | null;
+  dateTaken?: number | null;
   customMetadata?: Record<string, unknown>;
 }
 
@@ -70,6 +86,10 @@ export interface ImageItem {
   displayName: string;
   dateAdded: number;
   dateModified: number;
+  /** Catalog fields available from MediaStore without opening the file. */
+  bucketId?: string | null;
+  bucketDisplayName?: string | null;
+  description?: string | null;
   customMetadata?: Record<string, unknown>;
 }
 
@@ -83,6 +103,9 @@ export interface DocumentItem {
   relativePath: string;
   dateAdded: number;
   dateModified: number;
+  /** Catalog fields available from MediaStore without opening the file. */
+  title?: string | null;
+  isFavorite?: boolean;
   customMetadata?: Record<string, unknown>;
 }
 

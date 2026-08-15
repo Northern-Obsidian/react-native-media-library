@@ -40,6 +40,14 @@ class MediaStoreMapper {
       isFavorite = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) CursorUtils.getInt(cursor, MediaStore.Audio.Media.IS_FAVORITE) == 1 else false
       bookmark = CursorUtils.getLong(cursor, MediaStore.Audio.Media.BOOKMARK)
       bitrate = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.BITRATE)
+      writer = CursorUtils.getStringOrNull(cursor, MediaStore.Audio.Media.WRITER)
+      isMusic = CursorUtils.getBooleanOrNull(cursor, MediaStore.Audio.Media.IS_MUSIC)
+      isPodcast = CursorUtils.getBooleanOrNull(cursor, MediaStore.Audio.Media.IS_PODCAST)
+      isRingtone = CursorUtils.getBooleanOrNull(cursor, MediaStore.Audio.Media.IS_RINGTONE)
+      isAlarm = CursorUtils.getBooleanOrNull(cursor, MediaStore.Audio.Media.IS_ALARM)
+      isNotification = CursorUtils.getBooleanOrNull(cursor, MediaStore.Audio.Media.IS_NOTIFICATION)
+      cdTrackNumber = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.CD_TRACK_NUMBER)
+      numTracks = CursorUtils.getIntOrNull(cursor, MediaStore.Audio.Media.NUM_TRACKS)
       mimeType = CursorUtils.getString(cursor, MediaStore.Audio.Media.MIME_TYPE)
       fileExtension = data.substringAfterLast('.', "")
       relativePath = CursorUtils.getString(cursor, MediaStore.Audio.Media.RELATIVE_PATH)
@@ -73,6 +81,10 @@ class MediaStoreMapper {
       dateModified = CursorUtils.getLong(cursor, MediaStore.Video.Media.DATE_MODIFIED) * 1000L
       resolution = "${w}x${h}"
       orientation = CursorUtils.getInt(cursor, MediaStore.Video.Media.ORIENTATION)
+      colorStandard = CursorUtils.getStringOrNull(cursor, MediaStore.Video.Media.COLOR_STANDARD)
+      colorTransfer = CursorUtils.getStringOrNull(cursor, MediaStore.Video.Media.COLOR_TRANSFER)
+      bucketId = CursorUtils.getStringOrNull(cursor, MediaStore.Video.Media.BUCKET_ID)
+      bucketDisplayName = CursorUtils.getStringOrNull(cursor, MediaStore.Video.Media.BUCKET_DISPLAY_NAME)
     }
   }
 
@@ -105,6 +117,8 @@ class MediaStoreMapper {
       displayName = CursorUtils.getString(cursor, MediaStore.Images.Media.DISPLAY_NAME)
       dateAdded = CursorUtils.getLong(cursor, MediaStore.Images.Media.DATE_ADDED) * 1000L
       dateModified = CursorUtils.getLong(cursor, MediaStore.Images.Media.DATE_MODIFIED) * 1000L
+      bucketId = CursorUtils.getStringOrNull(cursor, MediaStore.Images.Media.BUCKET_ID)
+      bucketDisplayName = CursorUtils.getStringOrNull(cursor, MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
     }
   }
 
@@ -123,6 +137,7 @@ class MediaStoreMapper {
       name = CursorUtils.getString(cursor, FileColumns.TITLE)
       size = CursorUtils.getLong(cursor, FileColumns.SIZE)
       this.mimeType = mimeType
+      title = CursorUtils.getStringOrNull(cursor, FileColumns.TITLE)
       extension = MimeUtils.getExtensionFromMime(mimeType).ifEmpty { data.substringAfterLast('.', "") }
       relativePath = CursorUtils.getString(cursor, FileColumns.RELATIVE_PATH)
       dateAdded = CursorUtils.getLong(cursor, FileColumns.DATE_ADDED) * 1000L

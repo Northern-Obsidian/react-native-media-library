@@ -1,5 +1,6 @@
 package com.obsidian_north.mediastore
 
+import android.os.Build
 import android.provider.MediaStore
 import com.obsidian_north.mediastore.models.FilterOptionsRecord
 import com.obsidian_north.mediastore.models.PaginationOptionsRecord
@@ -7,41 +8,66 @@ import com.obsidian_north.mediastore.models.SortOptionsRecord
 import com.obsidian_north.mediastore.utils.MimeUtils
 
 class MediaStoreQueryBuilder {
-  fun buildAudioProjection() = arrayOf(
-    MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE,
-    MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM,
-    MediaStore.Audio.Media.ALBUM_ID, MediaStore.Audio.Media.DURATION,
-    MediaStore.Audio.Media.SIZE, MediaStore.Audio.Media.TRACK,
-    MediaStore.Audio.Media.DISC_NUMBER, MediaStore.Audio.Media.YEAR,
-    MediaStore.Audio.Media.DATE_ADDED, MediaStore.Audio.Media.DATE_MODIFIED,
-    MediaStore.Audio.Media.BITRATE, MediaStore.Audio.Media.MIME_TYPE,
-    MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.DISPLAY_NAME,
-    MediaStore.Audio.Media.RELATIVE_PATH, MediaStore.Audio.Media.COMPOSER,
-    MediaStore.Audio.Media.ALBUM_ARTIST, MediaStore.Audio.Media.BOOKMARK,
-    MediaStore.Audio.Media.IS_FAVORITE
-  )
+  fun buildAudioProjection(): Array<String> {
+    val columns = mutableListOf(
+      MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE,
+      MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM,
+      MediaStore.Audio.Media.ALBUM_ID, MediaStore.Audio.Media.DURATION,
+      MediaStore.Audio.Media.SIZE, MediaStore.Audio.Media.TRACK,
+      MediaStore.Audio.Media.DISC_NUMBER, MediaStore.Audio.Media.YEAR,
+      MediaStore.Audio.Media.DATE_ADDED, MediaStore.Audio.Media.DATE_MODIFIED,
+      MediaStore.Audio.Media.BITRATE, MediaStore.Audio.Media.MIME_TYPE,
+      MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.DISPLAY_NAME,
+      MediaStore.Audio.Media.RELATIVE_PATH, MediaStore.Audio.Media.COMPOSER,
+      MediaStore.Audio.Media.ALBUM_ARTIST, MediaStore.Audio.Media.BOOKMARK,
+      MediaStore.Audio.Media.IS_FAVORITE,
+      MediaStore.Audio.Media.IS_MUSIC, MediaStore.Audio.Media.IS_PODCAST,
+      MediaStore.Audio.Media.IS_RINGTONE, MediaStore.Audio.Media.IS_ALARM,
+      MediaStore.Audio.Media.IS_NOTIFICATION, MediaStore.Audio.Media.CD_TRACK_NUMBER,
+      MediaStore.Audio.Media.NUM_TRACKS
+    )
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      columns.add(MediaStore.Audio.Media.WRITER)
+    }
+    return columns.toTypedArray()
+  }
 
-  fun buildVideoProjection() = arrayOf(
-    MediaStore.Video.Media._ID, MediaStore.Video.Media.TITLE,
-    MediaStore.Video.Media.DURATION, MediaStore.Video.Media.WIDTH,
-    MediaStore.Video.Media.HEIGHT, MediaStore.Video.Media.SIZE,
-    MediaStore.Video.Media.MIME_TYPE, MediaStore.Video.Media.DATA,
-    MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DATE_ADDED,
-    MediaStore.Video.Media.DATE_MODIFIED, MediaStore.Video.Media.RESOLUTION,
-    MediaStore.Video.Media.ORIENTATION, MediaStore.Video.Media.DESCRIPTION,
-    MediaStore.Video.Media.TAGS, MediaStore.Video.Media.RELATIVE_PATH
-  )
+  fun buildVideoProjection(): Array<String> {
+    val columns = mutableListOf(
+      MediaStore.Video.Media._ID, MediaStore.Video.Media.TITLE,
+      MediaStore.Video.Media.DURATION, MediaStore.Video.Media.WIDTH,
+      MediaStore.Video.Media.HEIGHT, MediaStore.Video.Media.SIZE,
+      MediaStore.Video.Media.MIME_TYPE, MediaStore.Video.Media.DATA,
+      MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DATE_ADDED,
+      MediaStore.Video.Media.DATE_MODIFIED, MediaStore.Video.Media.RESOLUTION,
+      MediaStore.Video.Media.ORIENTATION, MediaStore.Video.Media.DESCRIPTION,
+      MediaStore.Video.Media.TAGS, MediaStore.Video.Media.RELATIVE_PATH,
+      MediaStore.Video.Media.COLOR_STANDARD, MediaStore.Video.Media.COLOR_TRANSFER
+    )
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      columns.add(MediaStore.Video.Media.BUCKET_ID)
+      columns.add(MediaStore.Video.Media.BUCKET_DISPLAY_NAME)
+    }
+    return columns.toTypedArray()
+  }
 
-  fun buildImageProjection() = arrayOf(
-    MediaStore.Images.Media._ID, MediaStore.Images.Media.TITLE,
-    MediaStore.Images.Media.WIDTH, MediaStore.Images.Media.HEIGHT,
-    MediaStore.Images.Media.ORIENTATION, MediaStore.Images.Media.SIZE,
-    MediaStore.Images.Media.MIME_TYPE, MediaStore.Images.Media.DATA,
-    MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATE_ADDED,
-    MediaStore.Images.Media.DATE_MODIFIED, MediaStore.Images.Media.DATE_TAKEN,
-    MediaStore.Images.Media.LATITUDE, MediaStore.Images.Media.LONGITUDE,
-    MediaStore.Images.Media.DESCRIPTION, MediaStore.Images.Media.RELATIVE_PATH
-  )
+  fun buildImageProjection(): Array<String> {
+    val columns = mutableListOf(
+      MediaStore.Images.Media._ID, MediaStore.Images.Media.TITLE,
+      MediaStore.Images.Media.WIDTH, MediaStore.Images.Media.HEIGHT,
+      MediaStore.Images.Media.ORIENTATION, MediaStore.Images.Media.SIZE,
+      MediaStore.Images.Media.MIME_TYPE, MediaStore.Images.Media.DATA,
+      MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATE_ADDED,
+      MediaStore.Images.Media.DATE_MODIFIED, MediaStore.Images.Media.DATE_TAKEN,
+      MediaStore.Images.Media.LATITUDE, MediaStore.Images.Media.LONGITUDE,
+      MediaStore.Images.Media.DESCRIPTION, MediaStore.Images.Media.RELATIVE_PATH
+    )
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      columns.add(MediaStore.Images.Media.BUCKET_ID)
+      columns.add(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+    }
+    return columns.toTypedArray()
+  }
 
   fun buildDocumentProjection() = arrayOf(
     MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.TITLE,

@@ -22,6 +22,7 @@ import type {
   LibraryResult,
   IncrementalChanges,
 } from "./MediaStoreModule.types";
+import type { DetailedMetadata, MediaMetaType } from "./metadata.types";
 
 export interface Spec extends TurboModule {
   getAudio(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<AudioItem[]>;
@@ -51,6 +52,8 @@ export interface Spec extends TurboModule {
   getVideoThumbnail(videoId: string, width: number | null, height: number | null): Promise<string | null>;
   getImageThumbnail(imageId: string, width: number | null, height: number | null): Promise<string | null>;
   getLibrary(sort: SortOptions | null, filter: FilterOptions | null, pagination: PaginationOptions | null): Promise<LibraryResult>;
+  getDetailedMetadata(mediaType: string, id: string): Promise<DetailedMetadata | null>;
+  getDetailedMetadataByUri(uri: string): Promise<DetailedMetadata | null>;
   addListener(eventName: string): void;
   removeListeners(count: number): void;
 }

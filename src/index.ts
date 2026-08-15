@@ -31,6 +31,15 @@ import type {
   LibraryQueryOptions,
   LibraryQueryResult,
 } from "./MediaStoreModule.types";
+import type {
+  DetailedMetadata,
+  MediaMetaType,
+  AudioFormatMetadata,
+  VideoFormatMetadata,
+  ImageFormatMetadata,
+  ExifMetadata,
+  DocumentFormatMetadata,
+} from "./metadata.types";
 
 export type {
   AudioItem,
@@ -61,6 +70,16 @@ export type {
   MetadataPlugin,
   LibraryQueryOptions,
   LibraryQueryResult,
+};
+
+export type {
+  DetailedMetadata,
+  MediaMetaType,
+  AudioFormatMetadata,
+  VideoFormatMetadata,
+  ImageFormatMetadata,
+  ExifMetadata,
+  DocumentFormatMetadata,
 };
 
 export { SortOrder, SortField } from "./MediaStoreModule.types";
@@ -183,6 +202,19 @@ export async function getById(
 export async function getByUri(uri: string): Promise<AudioItem | VideoItem | ImageItem | DocumentItem | null> {
   const result = await NativeModule.getByUri(uri);
   return result ? applyPlugins([result])[0] : null;
+}
+
+export async function getDetailedMetadata(
+  mediaType: MediaMetaType,
+  id: string
+): Promise<DetailedMetadata | null> {
+  return NativeModule.getDetailedMetadata(mediaType, id);
+}
+
+export async function getDetailedMetadataByUri(
+  uri: string
+): Promise<DetailedMetadata | null> {
+  return NativeModule.getDetailedMetadataByUri(uri);
 }
 
 export async function getRecent(

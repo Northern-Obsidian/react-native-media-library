@@ -2,6 +2,7 @@ package com.obsidian_north.mediastore
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.CancellationSignal
@@ -275,6 +276,16 @@ class MediaStoreModule(reactContext: ReactApplicationContext) : ReactContextBase
   }
 
   @ReactMethod
+  fun getDetailedMetadata(mediaType: String, id: String, promise: Promise) {
+    coroutineMethod({ repository.getDetailedMetadata(mediaType, id) }, promise)
+  }
+
+  @ReactMethod
+  fun getDetailedMetadataByUri(uri: String, promise: Promise) {
+    coroutineMethod({ repository.getDetailedMetadataByUri(uri) }, promise)
+  }
+
+  @ReactMethod
   fun getRecent(mediaType: String?, limit: Int?, promise: Promise) {
     coroutineMethod({
       val actualLimit = limit ?: 50
@@ -351,7 +362,7 @@ class MediaStoreModule(reactContext: ReactApplicationContext) : ReactContextBase
 
   @ReactMethod
   fun getAlbumArtwork(albumId: String?, promise: Promise) {
-    promise.resolve(com.obsidian_north.mediastore.utils.ArtworkUtils.getAlbumArtworkUri(albumId.orEmpty())?.toString())
+    coroutineMethod({ extractAlbumArtwork(albumId.orEmpty()) }, promise)
   }
 
   @ReactMethod
@@ -401,19 +412,42 @@ class MediaStoreModule(reactContext: ReactApplicationContext) : ReactContextBase
         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
           context.contentResolver.loadThumbnail(contentUri, android.util.Size(targetWidth, targetHeight), CancellationSignal())
         } else {
+          val idLong = mediaId.toLongOrNull() ?: return@withContext null
           @Suppress("DEPRECATION")
-          when (mediaType) { "video" -> MediaStore.Video.Thumbnails.getThumbnail(context.contentResolver, mediaId.toLong(), MediaStore.Video.Thumbnails.MINI_KIND, null)
-            else -> MediaStore.Images.Thumbnails.getThumbnail(context.contentResolver, mediaId.toLong(), MediaStore.Images.Thumbnails.MINI_KIND, null) }
+          when (mediaType) { "video" -> MediaStore.Video.Thumbnails.getThumbnail(context.contentResolver, idLong, MediaStore.Video.Thumbnails.MINI_KIND, null)
+            else -> MediaStore.Images.Thumbnails.getThumbnail(context.contentResolver, idLong, MediaStore.Images.Thumbnails.MINI_KIND, null) }
         }
         if (bitmap != null) {
           val thumbDir = File(context.cacheDir, "mediastore_thumbnails"); thumbDir.mkdirs()
           val thumbFile = File(thumbDir, "${mediaType}_${mediaId}_${targetWidth}x${targetHeight}.jpg")
           FileOutputStream(thumbFile).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out) }
           bitmap.recycle()
-          Uri.fromFile(thumbFile).toString()
+          thumbFile.toURI().toString()
         } else null
       } catch (e: Exception) { null }
     }
+  }
+
+  private suspend fun extractAlbumArtwork(albumId: String): String? = withContext(Dispatchers.IO) {
+    try {
+      val projection = arrayOf(MediaStore.Audio.Media.DATA)
+      val selection = "${MediaStore.Audio.Media.ALBUM_ID} = ?"
+      val cursor = repository.queryAudio(projection, selection, arrayOf(albumId), null)
+      var path: String? = null
+      cursor?.use { if (it.moveToFirst()) path = CursorUtils.getString(it, MediaStore.Audio.Media.DATA) }
+      val filePath = path ?: return@withContext null
+
+      val retriever = MediaMetadataRetriever()
+      retriever.setDataSource(filePath)
+      val picture = retriever.embeddedPicture
+      retriever.release()
+      if (picture == null) return@withContext null
+
+      val artworkDir = File(context.cacheDir, "mediastore_artwork"); artworkDir.mkdirs()
+      val artworkFile = File(artworkDir, "album_$albumId.jpg")
+      artworkFile.writeBytes(picture)
+      artworkFile.toURI().toString()
+    } catch (e: Exception) { null }
   }
 
   private suspend fun findDuplicates(mediaType: String?): List<DuplicateRecord> {

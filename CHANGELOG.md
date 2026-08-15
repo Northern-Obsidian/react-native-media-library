@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.2.0 (2026-08-13)
+
+### New Features
+
+- **Comprehensive deep metadata**: Added `getDetailedMetadata(mediaType, id)` and `getDetailedMetadataByUri(uri)` returning a new `DetailedMetadata` model.
+  - Audio/Video: codec (normalized), codec MIME, profile/level, bitrate, sample rate, channels, channel layout, bits-per-sample, frame rate, rotation, color space/standard/transfer (via `MediaExtractor` / `AVAsset` + `CMFormatDescription`).
+  - Images: format, dimensions, bit depth, color space, and a full `ExifMetadata` block (make/model, aperture, ISO, focal length, GPS, flash, white balance, scene capture, dates, …) via `ExifInterface` / `CGImageSource`.
+  - Documents: format, page count (PDF), word/character/line counts (text), encryption flag, creation/modification dates.
+- **Rich catalog columns on bulk queries** (read from the media index, no file I/O): `AudioItem` (`writer`, `isMusic`, `isPodcast`, `isRingtone`, `isAlarm`, `isNotification`, `cdTrackNumber`, `numTracks`), `VideoItem` (`colorStandard`, `colorTransfer`, `videoCodec`, `bucketId`, `bucketDisplayName`, `dateTaken`), `ImageItem` (`bucketId`, `bucketDisplayName`, `description`), `DocumentItem` (`title`, `isFavorite`).
+
+### Bug Fixes
+
+- **Android album artwork** now extracts the embedded picture via `MediaMetadataRetriever.getEmbeddedPicture()` and writes a cached file, fixing silent failures on Android 10+ (scoped storage removed the legacy `albumart` content provider).
+- **Android thumbnail URIs** now use `File.toURI()` instead of `Uri.fromFile(...)` to avoid `FileUriExposedException` under StrictMode; pre-Q thumbnail path hardened with `toLongOrNull()`.
+
 ## 3.1.2 (2026-08-01)
 
 ### Bug Fixes

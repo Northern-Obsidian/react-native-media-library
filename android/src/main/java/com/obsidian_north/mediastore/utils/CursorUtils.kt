@@ -38,6 +38,16 @@ object CursorUtils {
     return if (index >= 0) { if (cursor.isNull(index)) null else cursor.getLong(index) } else null
   }
 
+  fun getBoolean(cursor: Cursor, columnName: String): Boolean {
+    val index = cursor.getColumnIndex(columnName)
+    return if (index >= 0) cursor.getInt(index) != 0 else false
+  }
+
+  fun getBooleanOrNull(cursor: Cursor, columnName: String): Boolean? {
+    val index = cursor.getColumnIndex(columnName)
+    return if (index >= 0) { if (cursor.isNull(index)) null else cursor.getInt(index) != 0 } else null
+  }
+
   fun hasColumn(cursor: Cursor, columnName: String): Boolean =
     cursor.getColumnIndex(columnName) >= 0
 }
