@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.2.1 (2026-08-15)
+
+### Bug Fixes
+
+- **Android build fix**: resolved Kotlin compilation failures in `MediaStoreModule.kt` and `MediaStoreMetadataExtractor.kt` (`:compileReleaseKotlin`):
+  - Added the missing `CursorUtils` import.
+  - Replaced the non-existent `MediaFormat.KEY_BITS_PER_SAMPLE` / `KEY_CAPTURE_FRAMERATE` / `getDouble()` references with the raw format keys `"bits-per-sample"` / `"capture-framerate"` and a type-safe `getNumberAsDouble` helper.
+  - Replaced the non-existent `ExifInterface.TAG_ISO` with `TAG_ISO_SPEED_RATINGS`.
+
 ## 3.2.0 (2026-08-13)
 
 ### New Features

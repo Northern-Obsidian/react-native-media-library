@@ -84,7 +84,7 @@ object MediaStoreMetadataExtractor {
       channelLayout(ch)?.let { map["channelLayout"] = it }
     }
     if (format.containsKey(MediaFormat.KEY_DURATION)) map["durationMs"] = format.getLong(MediaFormat.KEY_DURATION) / 1000L
-    if (format.containsKey(MediaFormat.KEY_BITS_PER_SAMPLE)) map["bitsPerSample"] = format.getInteger(MediaFormat.KEY_BITS_PER_SAMPLE)
+    if (format.containsKey("bits-per-sample")) map["bitsPerSample"] = format.getInteger("bits-per-sample")
     if (format.containsKey(MediaFormat.KEY_LANGUAGE)) map["language"] = format.getString(MediaFormat.KEY_LANGUAGE)
     if (format.containsKey(MediaFormat.KEY_PROFILE)) map["codecProfile"] = format.getInteger(MediaFormat.KEY_PROFILE)
   }
@@ -98,14 +98,19 @@ object MediaStoreMetadataExtractor {
     if (format.containsKey(MediaFormat.KEY_BIT_RATE)) map["bitrate"] = format.getInteger(MediaFormat.KEY_BIT_RATE)
     if (format.containsKey(MediaFormat.KEY_WIDTH)) map["width"] = format.getInteger(MediaFormat.KEY_WIDTH)
     if (format.containsKey(MediaFormat.KEY_HEIGHT)) map["height"] = format.getInteger(MediaFormat.KEY_HEIGHT)
-    val frameRate = if (format.containsKey(MediaFormat.KEY_FRAME_RATE)) format.getInteger(MediaFormat.KEY_FRAME_RATE).toDouble()
-    else if (format.containsKey(MediaFormat.KEY_CAPTURE_FRAMERATE)) format.getDouble(MediaFormat.KEY_CAPTURE_FRAMERATE)
-    else null
+    val frameRate = format.getNumberAsDouble(MediaFormat.KEY_FRAME_RATE) ?: format.getNumberAsDouble("capture-framerate")
     if (frameRate != null) map["frameRate"] = frameRate
     if (format.containsKey(MediaFormat.KEY_DURATION)) map["durationMs"] = format.getLong(MediaFormat.KEY_DURATION) / 1000L
     if (format.containsKey(MediaFormat.KEY_COLOR_STANDARD)) map["colorStandard"] = format.getInteger(MediaFormat.KEY_COLOR_STANDARD)
     if (format.containsKey(MediaFormat.KEY_COLOR_TRANSFER)) map["colorTransfer"] = format.getInteger(MediaFormat.KEY_COLOR_TRANSFER)
     if (format.containsKey(MediaFormat.KEY_LANGUAGE)) map["language"] = format.getString(MediaFormat.KEY_LANGUAGE)
+  }
+
+  private fun MediaFormat.getNumberAsDouble(key: String): Double? = when (getValueTypeForKey(key)) {
+    MediaFormat.TYPE_INTEGER -> getInteger(key).toDouble()
+    MediaFormat.TYPE_LONG -> getLong(key).toDouble()
+    MediaFormat.TYPE_FLOAT -> getFloat(key).toDouble()
+    else -> null
   }
 
   private fun channelLayout(channels: Int): String? = when (channels) {
@@ -251,7 +256,7 @@ object MediaStoreMetadataExtractor {
 
     str(ExifInterface.TAG_ORIENTATION)?.let { it.toIntOrNull()?.let { v -> map["orientation"] = v } }
     dbl(ExifInterface.TAG_F_NUMBER)?.let { if (it > 0) map["aperture"] = it }
-    int(ExifInterface.TAG_ISO)?.let { map["iso"] = it }
+    int(ExifInterface.TAG_ISO_SPEED_RATINGS)?.let { map["iso"] = it }
     dbl(ExifInterface.TAG_SHUTTER_SPEED_VALUE)?.let { map["shutterSpeed"] = it }
     dbl(ExifInterface.TAG_EXPOSURE_TIME)?.let { map["exposureTime"] = it }
     int(ExifInterface.TAG_EXPOSURE_PROGRAM)?.let { map["exposureProgram"] = exposureProgramName(it) }

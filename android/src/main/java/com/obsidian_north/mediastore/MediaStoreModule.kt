@@ -10,6 +10,7 @@ import android.provider.MediaStore
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.obsidian_north.mediastore.models.*
+import com.obsidian_north.mediastore.utils.CursorUtils
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileOutputStream

@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.obsidian_north"
-version = "3.0.0"
+version = "3.2.1"
 
 android {
     namespace = "com.obsidian_north.mediastore"
